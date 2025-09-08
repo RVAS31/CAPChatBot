@@ -1,0 +1,64 @@
+<mvc:View
+    controllerName="app.controller.Chatbox"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc"
+>
+    <Page
+        id="chatPage"
+        title="Chat"
+    >
+        <content>
+            <List
+                id="chatList"
+                items="{chatBotModel>/messages}"
+                showSeparators="None"
+                busyIndicatorDelay="0"
+                updateFinished=".onChatListUpdateFinished"
+            >
+                <CustomListItem id="_IDGenCustomListItem">
+                    <!-- Bind justifyContent to sender: user -> End (right), bot -> Start (left) -->
+                    <HBox id="_IDGenHBox"
+                        width="100%"
+                        justifyContent="{= ${chatBotModel>sender} === 'user' ? 'End' : 'Start' }"
+                    >
+                        <!-- Return ALL classes from one expression -->
+                        <VBox id="_IDGenVBox"
+                            class="sapUiSmallMargin userBubble"
+                        >
+                            <!-- (alignSelf is optional now; justifyContent already handles left/right) -->
+                            <Text id="_IDGenText1"
+                                text="{chatBotModel>message}"
+                                class="sapUiTinyMargin"
+                                wrapping="true"
+                            />
+                            <Text id="_IDGenText2"
+                                text="{
+                path: 'chatBotModel>timestamp',
+                formatter: '.formatter.formatCreatedAt'
+            }"
+                                class="sapUiTinyMarginTop sapUiTinyMarginEnd"
+                            />
+                        </VBox>
+                    </HBox>
+                </CustomListItem>
+            </List>
+        </content>
+
+        <footer>
+            <Toolbar id="_IDGenToolbar1">
+                <Input
+                    id="messageInput"
+                    placeholder="Type your message..."
+                    liveChange="onLiveChange"
+                    change=".onAskAI"
+                    valueLiveUpdate="true"
+                />
+                <Button
+                    id="sendButton"
+                    icon="sap-icon://paper-plane"
+                    press=".onAskAI"
+                />
+            </Toolbar>
+        </footer>
+    </Page>
+</mvc:View>

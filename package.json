@@ -1,0 +1,76 @@
+{
+  "name": "chatboxcloudv2",
+  "version": "1.0.0",
+  "description": "A simple CAP project.",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@cap-js-community/odata-v2-adapter": "^1.14.3",
+    "@langchain/core": "^0.3.72",
+    "@langchain/langgraph": "^0.4.7",
+    "@langchain/mcp-adapters": "^0.6.0",
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "@sap-ai-sdk/langchain": "^1.18.0",
+    "@sap-ai-sdk/orchestration": "^1.18.0",
+    "@sap-cloud-sdk/http-client": "^4.0.2",
+    "@sap-cloud-sdk/resilience": "^4.0.2",
+    "@sap/cds": "^8",
+    "@sap/cds-dk": "^8.9.2",
+    "@sap/hana-client": "^2.24.24",
+    "@sap/ux-specification": "^1.124.14",
+    "@sap/xssec": "^4.6.0",
+    "express": "^4",
+    "langchain": "^0.3.31",
+    "passport": "^0.7.0",
+    "rimraf": "^6.0.1",
+    "sqlite3": "^5.1.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cap-js/cds-types": "^0.9.0",
+    "@cap-js/sqlite": "^1"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "debug": "cds run --with-mocks --in-memory"
+  },
+  "cds": {
+    "i18n": {
+      "languages": [
+        "en_EN",
+        "de"
+      ],
+      "folder": "i18n",
+      "file": "i18n"
+    },
+    "requires": {
+      "uaa": {
+        "kind": "xsuaa"
+      },
+      "db": {
+        "[production]": {
+          "kind": "hana-cloud",
+          "model": [
+            "db/data-config",
+            "db/data"
+          ]
+        },
+        "[development]": {
+          "kind": "hana-cloud",
+          "model": [
+            "db/data-config",
+            "db/data"
+          ]
+        },
+        "model": [
+          "db",
+          "srv"
+        ]
+      }
+    }
+  },
+  "sapux": [
+    "app"
+  ]
+}

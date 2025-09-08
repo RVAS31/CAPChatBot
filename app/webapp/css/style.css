@@ -1,0 +1,21 @@
+/* Increase specificity so it overrides theme defaults */
+.sapMLIB-CTX .sapMFlexBox.userBubble {
+  background-color: #d1eaff !important;
+  border-radius: 1rem;
+  padding: 0.5rem 0.75rem;
+  max-width: 70%;
+}
+
+.sapMLIB-CTX .sapMFlexBox.botBubble {
+  background-color: #f0f0f0 !important; 
+  border-radius: 1rem;
+  padding: 0.5rem 0.75rem;
+  max-width: 70%;
+}
+
+/* Optional: keep bubbles sized to their content instead of stretching full width */
+.sapMLIB-CTX .sapMFlexBox.userBubble,
+.sapMLIB-CTX .sapMFlexBox.botBubble {
+  display: inline-flex;        /* so background hugs the text */
+  align-items: flex-start;     /* normal text flow inside the bubble */
+}

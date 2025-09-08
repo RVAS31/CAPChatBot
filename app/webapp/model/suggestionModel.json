@@ -1,0 +1,364 @@
+{
+	"Opportunity": [
+		{
+			"value": "displayId",
+			"label-de": "ID",
+			"label-en": "ID",
+			"visible": "true"
+		},
+		{
+			"value": "draftMode",
+			"label-de": "Entwurfsmodus",
+			"label-en": "Draft Mode",
+			"visible": "true"
+		},
+		{
+			"value": "name",
+			"label-de": "Name",
+			"label-en": "Name",
+			"visible": "true"
+		},
+		{
+			"value": "documentType",
+			"label-de": "Dokumenttyp-ID",
+			"label-en": "Document Type ID",
+			"visible": "true"
+		},
+		{
+			"value": "documentTypeDescription",
+			"label-de": "Opportunity-Typ",
+			"label-en": "Opportunity Type",
+			"visible": "true"
+		},
+		{
+			"value": "source",
+			"label-de": "Quell-ID",
+			"label-en": "Source ID",
+			"visible": "true"
+		},
+		{
+			"value": "sourceDescription",
+			"label-de": "Quelle",
+			"label-en": "Source",
+			"visible": "true"
+		},
+		{
+			"value": "startDate",
+			"label-de": "Startdatum",
+			"label-en": "Start Date",
+			"visible": "true"
+		},
+		{
+			"value": "closeDate",
+			"label-de": "Abschlussdatum",
+			"label-en": "Close Date",
+			"visible": "true"
+		},
+		{
+			"value": "expectedRevenueAmountContent",
+			"label-de": "Inhalt des erwarteten Umsatzbetrags",
+			"label-en": "Expected Revenue Amount Content",
+			"visible": "true"
+		},
+		{
+			"value": "expectedRevenueAmountCurrencyCode",
+			"label-de": "Währungscode für den erwarteten Umsatzbetrag",
+			"label-en": "Expected Revenue Amount Currency Code",
+			"visible": "true"
+		}
+	],
+	"OpportunityItem": [
+		{
+			"value": "productDescription",
+			"label-de": "Produktbeschreibung",
+			"label-en": "Product Description",
+			"visible": "true"
+		},
+		{
+			"value": "quantityContent",
+			"label-de": "Mengeninhalt",
+			"label-en": "Quantity Content",
+			"visible": "true"
+		},
+		{
+			"value": "quantityUomCode",
+			"label-de": "Menge Uom Code",
+			"label-en": "Quantity Uom Code",
+			"visible": "true"
+		},
+		{
+			"value": "quantityUomDescription",
+			"label-de": "Menge Uom Beschreibung",
+			"label-en": "Quantity Uom Description",
+			"visible": "true"
+		}
+	],
+	"CorporateAccount": [
+		{
+			"value": "displayId",
+			"label-de": "Kunde ID",
+			"label-en": "Account ID",
+			"visible": "true"
+		},
+		{
+			"value": "ownerFormattedName",
+			"label-de": "Eigentümer",
+			"label-en": "Owner",
+			"visible": "true"
+		},
+		{
+			"value": "primaryContactDisplayId",
+			"label-de": "Hauptkontakt-ID",
+			"label-en": "Main Contact ID",
+			"visible": "true"
+		},
+		{
+			"value": "defaultCommunicationEmail",
+			"label-de": "E-Mail",
+			"label-en": "E-mail",
+			"visible": "true"
+		},
+		{
+			"value": "defaultCommunicationWeb",
+			"label-de": "Netz",
+			"label-en": "Web",
+			"visible": "true"
+		}
+	],
+	"Contact": [
+		{
+			"value": "displayId",
+			"label-de": "Kontakt-ID",
+			"label-en": "Contact ID",
+			"visible": "true"
+		},
+		{
+			"value": "formattedName",
+			"label-de": "Formatierter Name",
+			"label-en": "Formatted Name",
+			"visible": "true"
+		},
+		{
+			"value": "formOfAddress",
+			"label-de": "Titel",
+			"label-en": "Title",
+			"visible": "true"
+		},
+		{
+			"value": "formOfAddressDescription",
+			"label-de": "Titel Beschreibung",
+			"label-en": "Title Description",
+			"visible": "true"
+		},
+		{
+			"value": "academicTitle",
+			"label-de": "Akademischer Titel",
+			"label-en": "Academic Title",
+			"visible": "true"
+		},
+		{
+			"value": "academicTitleDescription",
+			"label-de": "Beschreibung des akademischen Titels",
+			"label-en": "Academic Title Description",
+			"visible": "true"
+		},
+		{
+			"value": "eMail",
+			"label-de": "E-mail",
+			"label-en": "E-mail",
+			"visible": "true"
+		}
+	],
+	"SalesQuote": [
+		{
+			"value": "displayId",
+			"label-de": "ID",
+			"label-en": "ID",
+			"visible": "true"
+		},
+		{
+			"value": "draftMode",
+			"label-de": "Entwurfsmodus",
+			"label-en": "Draft Mode",
+			"visible": "true"
+		},
+		{
+			"value": "name",
+			"label-de": "Name",
+			"label-en": "Name",
+			"visible": "true"
+		},
+		{
+			"value": "documentType",
+			"label-de": "Dokumenttyp",
+			"label-en": "Document Type",
+			"visible": "true"
+		},
+		{
+			"value": "documentTypeDescription",
+			"label-de": "Dokumenttyp-Beschreibung",
+			"label-en": "Document Type Description",
+			"visible": "true"
+		},
+		{
+			"value": "customerReferenceId",
+			"label-de": "Kundenreferenz-ID",
+			"label-en": "Customer Reference Id",
+			"visible": "true"
+		},
+		{
+			"value": "lifeCycleStatus",
+			"label-de": "Lebenszyklusstatus",
+			"label-en": "Life Cycle Status",
+			"visible": "true"
+		},
+		{
+			"value": "progressStatus",
+			"label-de": "Fortschrittsstatus",
+			"label-en": "Progress Status",
+			"visible": "true"
+		},
+		{
+			"value": "progressStatusValidSince",
+			"label-de": "Fortschrittsstatus gültig seit",
+			"label-en": "Progress Status Valid Since",
+			"visible": "true"
+		},
+		{
+			"value": "externalSalesOrderRequestStatus",
+			"label-de": "Externer Verkaufsauftragsanfragestatus",
+			"label-en": "External Sales Order Request Status",
+			"visible": "true"
+		},
+		{
+			"value": "creditWorthinessStatus",
+			"label-de": "Kreditwürdigkeitsstatus",
+			"label-en": "Credit Worthiness Status",
+			"visible": "true"
+		},
+		{
+			"value": "availabilityStatus",
+			"label-de": "Verfügbarkeitsstatus",
+			"label-en": "Availability Status",
+			"visible": "true"
+		},
+		{
+			"value": "documentLanguage",
+			"label-de": "Dokumentsprache",
+			"label-en": "Document Language",
+			"visible": "true"
+		},
+		{
+			"value": "documentLanguageDescription",
+			"label-de": "Beschreibung der Dokumentsprache",
+			"label-en": "Document Language Description",
+			"visible": "true"
+		},
+		{
+			"value": "documentDate",
+			"label-de": "Dokumentdatum",
+			"label-en": "Document Date",
+			"visible": "true"
+		},
+		{
+			"value": "validityPeriodStartDate",
+			"label-de": "Gültigkeitszeitraum Startdatum",
+			"label-en": "Validity Period Start Date",
+			"visible": "true"
+		},
+		{
+			"value": "validityPeriodEndDate",
+			"label-de": "Gültigkeitszeitraum Enddatum",
+			"label-en": "Validity Period End Date",
+			"visible": "true"
+		}
+	],
+	"SalesQuoteItem": [
+		{
+			"value": "productId",
+			"label-de": "Produkt-ID",
+			"label-en": "Product ID",
+			"visible": "true"
+		},
+		{
+			"value": "productDescription",
+			"label-de": "Beschreibung",
+			"label-en": "Description",
+			"visible": "true"
+		},
+		{
+			"value": "quantityContent",
+			"label-de": "Menge",
+			"label-en": "Quantity",
+			"visible": "true"
+		},
+		{
+			"value": "quantityUomDescription",
+			"label-de": "Einheit",
+			"label-en": "Unit",
+			"visible": "true"
+		},
+		{
+			"value": "netAmountContent",
+			"label-de": "Nettowert",
+			"label-en": "Net Value",
+			"visible": "true"
+		},
+		{
+			"value": "netAmountCurrencyCode",
+			"label-de": "Nettowert Einheit",
+			"label-en": "Net Value Unit",
+			"visible": "true"
+		},
+		{
+			"value": "netPriceAmountContent",
+			"label-de": "Nettopreis Betrag",
+			"label-en": "Net Price Amount",
+			"visible": "true"
+		},
+		{
+			"value": "netPriceAmountCurrencyCode",
+			"label-de": "Nettopreis Einheit",
+			"label-en": "Net Price Unit",
+			"visible": "true"
+		},
+		{
+			"value": "netPriceBaseQuantityContent",
+			"label-de": "Nettopreis Basis-Mengenwert",
+			"label-en": "Net Price Base Quantity Value",
+			"visible": "true"
+		},
+		{
+			"value": "netPriceBaseQuantityUomCode",
+			"label-de": "Nettopreis Basis-Mengeneinheit",
+			"label-en": "Net Price Base Quantity Unit",
+			"visible": "true"
+		}
+	],
+	"Employee": [
+		{
+			"value": "displayId",
+			"label-de": "ID",
+			"label-en": "ID",
+			"visible": "true"
+		},
+		{
+			"value": "workplaceAddressEmail",
+			"label-de": "Arbeitsplatzadresse E-Mail",
+			"label-en": "Workplace Address Email",
+			"visible": "true"
+		},
+		{
+			"value": "organizationalUnitName",
+			"label-de": "Name der Organisationseinheit",
+			"label-en": "Organizational Unit Name",
+			"visible": "true"
+		},
+		{
+			"value": "formattedName",
+			"label-de": "Formatierter Name",
+			"label-en": "Formatted Name",
+			"visible": "true"
+		}
+	]
+}

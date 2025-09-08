@@ -1,0 +1,128 @@
+{
+	"SalesQuote": {
+		"Connection": [
+			{
+				"value": "SalesQuote",
+				"label-de": "Angebote",
+				"label-en": "Sales Quote",
+				"collection": "",
+				"source": "",
+				"target": "",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			},
+			{
+				"value": "Contact",
+				"label-de": "Ansprechpartner",
+				"label-en": "Contact",
+				"collection": "Contact",
+				"source": "contactOfAccount",
+				"target": "displayId",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			},
+			{
+				"value": "Employee",
+				"label-de": "Mitarbeiter",
+				"label-en": "Employee",
+				"collection": "Employee",
+				"source": "owner",
+				"target": "displayId",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			},
+			{
+				"value": "SalesQuoteItem",
+				"label-de": "Positionen",
+				"label-en": "Position",
+				"collection": "",
+				"source": "items",
+				"target": "",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "",
+				"type": "collection"
+			}
+		]
+	},
+	"Opportunity": {
+		"Connection": [
+			{
+				"value": "Opportunity",
+				"label-de": "Opportunity",
+				"label-en": "Opportunity",
+				"collection": "",
+				"source": "",
+				"target": "",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			},
+			{
+				"value": "CorporateAccount",
+				"label-de": "Kunde",
+				"label-en": "Customer",
+				"collection": "CorporateAccount",
+				"source": "account",
+				"target": "displayId",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			},
+			{
+				"value": "Contact",
+				"label-de": "Ansprechpartner",
+				"label-en": "Contact",
+				"collection": "Contact",
+				"source": "primaryContact",
+				"target": "displayId",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			},
+			{
+				"value": "OpportunityItem",
+				"label-de": "Positionen",
+				"label-en": "Position",
+				"collection": "",
+				"source": "items",
+				"target": "",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "",
+				"type": "collection"
+			}
+		]
+	},
+	"CorporateAccount": {
+		"Connection": [
+			{
+				"value": "CorporateAccount",
+				"label-de": "Kunde",
+				"label-en": "Customer",
+				"collection": "",
+				"source": "",
+				"target": "",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			}
+		]
+	},
+	"Contact": {
+		"Connection": [
+			{
+				"value": "Contact",
+				"label-de": "Ansprechpartner",
+				"label-en": "Contact",
+				"collection": "",
+				"source": "",
+				"target": "",
+				"sourceOdata": "ODataModel",
+				"targetOdata": "ODataModel",
+				"type": "standart"
+			}
+		]
+	}
+}

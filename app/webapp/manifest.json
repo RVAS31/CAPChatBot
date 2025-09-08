@@ -1,0 +1,144 @@
+{
+  "_version": "1.59.0",
+  "sap.app": {
+    "id": "app",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.13.6",
+      "toolsId": "edd0f220-8214-4f4c-a350-6ab4af2b403b"
+    },
+    "dataSources": {
+      "suggestionModel_source": {
+        "uri": "model/suggestionModel.json",
+        "type": "JSON"
+      },
+      "connectionModel_source": {
+        "uri": "model/connectionModel.json",
+        "type": "JSON"
+      },
+      "cloudV2ChatBox": {
+        "uri": "/odata/v4/ai/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "4.0",
+          "annotations": [],
+          "localUri": "localService/metadata.xml"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.124.1",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.f": {},
+        "sap.suite.ui.generic.template": {},
+        "sap.ui.comp": {},
+        "sap.ui.generic.app": {},
+        "sap.ui.table": {},
+        "sap.ushell": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "app.i18n.i18n"
+        }
+      },
+      "suggestionMainModel": {
+        "type": "sap.ui.model.json.JSONModel",
+        "dataSource": "suggestionModel_source"
+      },
+      "connectionMainModel": {
+        "type": "sap.ui.model.json.JSONModel",
+        "dataSource": "connectionModel_source"
+      },
+      "AIOdataModel": {
+        "dataSource": "cloudV2ChatBox",
+        "preload": true,
+        "settings": {
+          "synchronizationMode": "None",
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "type": "View",
+        "viewType": "XML",
+        "async": true,
+        "path": "app.view",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "bypassed": {
+          "target": "notFound"
+        }
+      },
+      "routes": [
+        {
+          "name": "chatbox",
+          "pattern": "",
+          "target": [
+            "chatbox"
+          ]
+        }
+      ],
+      "targets": {
+        "chatbox": {
+          "id": "chatbox",
+          "name": "Chatbox",
+          "level": 1
+        }
+      }
+    },
+    "rootView": {
+      "viewName": "app.view.App",
+      "type": "XML",
+      "async": true,
+      "id": "app"
+    }
+  }
+}

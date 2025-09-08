@@ -1,0 +1,154 @@
+_schema-version: '3.1'
+ID: chatboxcloudv2
+version: 1.0.0
+description: "A simple CAP project."
+parameters:
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm install --production
+        - npx -p @sap/cds-dk cds build --production
+
+modules:
+  # --------------------- SERVER MODULE ------------------------
+  - name: chatboxcloudv2-srv
+    type: nodejs
+    path: gen/srv
+    build-parameters:
+      ignore:
+        - default-*.json
+        - .env
+        - "*node_modules*"
+        - package-lock.json
+    parameters:
+      buildpack: nodejs_buildpack
+      memory: 512M
+      disk-quota: 1024M
+    provides:
+      - name: srv # required by consumers of CAP services (e.g. approuter)
+        properties:
+          srv-url: ${default-url}
+    requires:
+      - name: chatboxcloudv2-db
+      - name: chatboxcloudv2-uaa
+      - name: chatboxcloudv2-destination
+      - name: ai-core-instance   # <-- bind AI Core instance
+
+  # ---------------- DATABASE DEPLOYER MODULE ------------------
+  - name: chatboxcloudv2-db-deployer
+    type: hdb
+    path: gen/db
+    build-parameters:
+      ignore:
+        - default-*.json
+        - .env
+        - "*node_modules*"
+        - package-lock.json
+    parameters:
+      buildpack: nodejs_buildpack
+      memory: 256M
+      disk-quota: 1024M
+    requires:
+      - name: chatboxcloudv2-uaa
+      - name: chatboxcloudv2-db
+
+  # ------------------ APP ROUTER MODULE -----------------------
+  - name: chatboxcloudv2-app
+    type: approuter.nodejs
+    path: app
+    build-parameters:
+      ignore:
+        - default-*.json
+        - .env
+        - "*node_modules*"
+        - package-lock.json
+    parameters:
+      memory: 256M
+      disk-quota: 1024M
+      keep-existing-routes: true
+    requires:
+      - name: chatboxcloudv2-uaa
+      - name: srv
+        group: destinations
+        properties:
+          name: srv
+          url: ~{srv-url}
+          timeout: 600000
+          forwardAuthToken: true
+      - name: chatboxcloudv2-destination
+    provides:
+      - name: app-api
+        properties:
+          app-protocol: ${protocol}
+          app-uri: ${default-uri}
+
+resources:
+  # ----------------------- UAA SERVICE ------------------------
+  - name: chatboxcloudv2-uaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: chatboxcloudv2-AccentureGlobalSolutionsLtdAccentureSbgAsg-${space}
+        tenant-mode: dedicated
+
+  # ------------------- HDI CONTAINER SERVICE ------------------
+  - name: chatboxcloudv2-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+    properties:
+      hdi-service-name: ${service-name}
+
+  # ------------------ DESTINATION SERVICE ---------------------
+  - name: chatboxcloudv2-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            destinations:
+              - Name: ui5
+                Type: HTTP
+                ProxyType: Internet
+                Authentication: NoAuthentication
+                URL: https://ui5.sap.com
+
+              - Name: chatboxcloudv2-app-api
+                Description: basic project CAP service
+                Type: HTTP
+                ProxyType: Internet
+                Authentication: NoAuthentication
+                HTML5.DynamicDestination: true
+                HTML5.ForwardAuthToken: true
+                URL: ~{srv/srv-url}
+
+              - Name: ai-core-destination-btp
+                Type: HTTP
+                ProxyType: Internet
+                Authentication: OAuth2ClientCredentials
+                URL: https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com
+                TokenServiceURL: https://accenture-sbg-asg.authentication.eu10.hana.ondemand.com/oauth/token
+                tokenServiceURLType: Dedicated
+                clientId: ~{ai-core-instance/clientid}
+                clientSecret: ~{ai-core-instance/clientsecret}
+
+            existing_destinations_policy: update
+    requires:
+      - name: srv
+      - name: ai-core-instance
+
+  # ------------------ AI CORE SERVICE -------------------------
+  - name: ai-core-instance
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: aicore
+      service-plan: extended
