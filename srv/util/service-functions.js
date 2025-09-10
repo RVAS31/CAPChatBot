@@ -1,30 +1,43 @@
-const axios = require("axios"); // to call C4C APIs
 
-function getBusinessObjectNames() {
-    const names = ['Contact', 'Account', 'Opportunity', 'SalesQuote'];
-    return names.join(', ');
+const utilFunctions = require("./service-query");
+/**
+ * to check the BO name
+ * @param {*} BOName 
+ * @returns 
+ */
+function checkBONames(BOName) {
+    const names = ['accounts', 'contactPersons', 'salesQuotes'];
+    return names.includes(BOName)
 }
 
 /**
- * To fecth a BO
+ * To call C4C API with differente CRUD operations
  * @param {*} destC4C 
- * @param {*} endpoint 
+ * @param {*} intentJson contains the necessarily paramaters to move forward
  * @returns 
  */
-async function _fetchC4C(destC4C, endpoint) {
+async function _C4CApi(destC4C, intentJson) {
+
+    //To define the endpoint to address
+    const endpoint = `${intentJson.service}/${intentJson.businessobject}`;
+
+    //To get the operation
+    const operation = intentJson.operation;
 
     // Basic Auth header
     const authHeader =
         "Basic " + Buffer.from(`${destC4C.username}:${destC4C.password}`).toString("base64");
 
-    // Call C4C OData API
-    const res = await axios.get(`/sap/c4c/api/v1/${endpoint}`, {
-        baseURL: destC4C.url,
-        headers: { Authorization: authHeader }
-    });
+    let res;
 
-    const results = res.data?.value || [];
-    return results
+    // Call C4C OData API
+    if (operation === "read") {
+        res = await utilFunctions.getC4CEntity(endpoint, destC4C, authHeader);
+    } else {
+        res = await utilFunctions.postC4CEntity(endpoint, intentJson.payload, destC4C, authHeader);
+    }
+
+    return res;
 }
 
 /**
@@ -46,7 +59,7 @@ async function _summarize(orchestration, c4cResponse, label) {
 }
 
 module.exports = {
-    getBusinessObjectNames,
-    _fetchC4C,
+    checkBONames,
+    _C4CApi,
     _summarize
 }

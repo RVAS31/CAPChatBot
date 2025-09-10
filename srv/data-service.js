@@ -1,7 +1,7 @@
 const cds = require("@sap/cds");
 const { OrchestrationClient } = require("@sap-ai-sdk/orchestration");
 const { getDestination } = require("@sap-cloud-sdk/connectivity");
-const { getBusinessObjectNames, _fetchC4C, _summarize } = require("./util/service-functions");
+const { checkBONames, _C4CApi } = require("./util/service-functions");
 
 module.exports = cds.service.impl(async function () {
     const { AICollection } = this.entities;
@@ -22,6 +22,7 @@ module.exports = cds.service.impl(async function () {
 
         //To define the orchestration client to commnad the AI to extract SAP C4C queries and returns 
         //a json schema that will be used as a request 
+
         const orchestration = new OrchestrationClient({
             destination: destAI,
             llm: { model_name: "gpt-4o" },
@@ -35,7 +36,8 @@ module.exports = cds.service.impl(async function () {
 
           JSON schema:
           {
-            "businessobject": "<accounts | contacts | salesquotes | opportunities | other>",
+            "businessobject": "<accounts | contactPersons | salesQuotes | other>",
+            "service": "<account-service | contact-person-service | sales-quote-service | other>,
             "operation": "<create | read | update | delete | search | chat>",
             "task": "<short description>",
             "select": ["<fieldName1>", "<fieldName2>", ...],
@@ -53,7 +55,8 @@ module.exports = cds.service.impl(async function () {
 
           User: "Show me all sales quotes that have name Test"
           Output: {
-            "businessobject": "salesquotes",
+            "businessobject": "salesQuotes",
+            "service": "sales-quote-service",
             "operation": "read",
             "task": "retrieve sales quotes with name Test",
             "filter": { "name": "Test" },
@@ -63,7 +66,8 @@ module.exports = cds.service.impl(async function () {
 
           User: "Show me all sales quotes by name"
           Output: {
-            "businessobject": "salesquotes",
+            "businessobject": "salesQuotes",
+            "service": "sales-quote-service",
             "operation": "read",
             "task": "retrieve sales quotes by name",
             "filter": {},
@@ -74,6 +78,7 @@ module.exports = cds.service.impl(async function () {
           User: "Create a new account with name Max Mustermann"
           Output: {
             "businessobject": "accounts",
+            "service": "account-service"
             "operation": "create",
             "task": "create new account",
             "filter": {},
@@ -84,6 +89,7 @@ module.exports = cds.service.impl(async function () {
           User: "How's the weather today?"
           Output: {
             "businessobject": "other",
+            "service" : "other",
             "operation": "chat",
             "task": "general conversation",
             "filter": {},
@@ -112,49 +118,35 @@ module.exports = cds.service.impl(async function () {
 
         console.log("the intent", intentJson);
 
-        /*    //To define the orchestration client to classify according that it was given
-           const orchestrationClassifier = new OrchestrationClient({
-               destination: destAI,
-               llm: { model_name: "gpt-4o" },
-               templating: {
-                   template: [
-                       { role: "system", content: "You are an intent classifier for SAP C4C queries. Output JSON only…" },
-                       { role: "user", content: "{{?question}}" }
-                   ]
-               }
-           });
-           let responseText;
-   
-           // 4. Decide based on intent
-           if (intentJson.intent === "SalesQuotes") {
-               responseC4C = await _fetchC4C(destC4C, 'sales-quote-service/salesQuotes');
-   
-               //If everthing returns as the expected endpoints 
-               //5. Return a resport of the first 5 
-               responseText = await _summarize(orchestrationClassifier, responseC4C, 'items');
-   
-           } else if (intentJson.intent === "Accounts") {
-               responseC4C = await _fetchC4C(destC4C, 'account-service/accounts');
-   
-               //If everthing returns as the expected endpoints 
-               //5. Return a resport of the first 5 
-               responseText = await _summarize(orchestrationClassifier, responseC4C, 'Accounts');
-   
-           } else if (intentJson.intent === "Contacts") {
-               responseC4C = await _fetchC4C(destC4C, 'contact-person-service/contactPersons');
-   
-               //If everthing returns as the expected endpoints 
-               //5. Return a resport of the first 5 
-               responseText = await _summarize(orchestrationClassifier, responseC4C, 'Contacts');
-   
-           } else {
-               // fallback = general chat
-               const chatResp = await orchestration.chatCompletion({
-                   inputParams: { question: prompt }
-               });
-               responseText = chatResp.getContent();
-           }
-    */
+        //To define the orchestration client to classify according that it was given
+        const orchestrationClassifier = new OrchestrationClient({
+            destination: destAI,
+            llm: { model_name: "gpt-4o" },
+            templating: {
+                template: [
+                    { role: "system", content: "You are an intent classifier for SAP C4C queries. Output JSON only…" },
+                    { role: "user", content: "{{?question}}" }
+                ]
+            }
+        });
+
+        let responseText, responseC4C;
+
+
+        // 4. Decide based on intent
+        if (checkBONames(intentJson.businessobject)) {
+
+            responseC4C = await _C4CApi(destC4C, intentJson);
+
+        } else {
+
+            // fallback = general chat
+            const chatResp = await orchestration.chatCompletion({
+                inputParams: { question: prompt }
+            });
+            responseText = chatResp.getContent();
+        }
+
         //6. Persist into local CAP entity
         //const entry = { prompt, response: responseText, createdAt: new Date() };
         //await INSERT.into(AICollection).entries(entry);
@@ -184,4 +176,5 @@ module.exports = cds.service.impl(async function () {
 
         return "This is a test"
     });
+
 });
