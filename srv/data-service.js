@@ -116,43 +116,74 @@ module.exports = cds.service.impl(async function () {
             intentJson = { businessObject: "Other", operation: "Chat", task: prompt };
         }
 
-        console.log("the intent", intentJson);
+        console.log("The Intent JSON form: ", intentJson);
 
-        //To define the orchestration client to classify according that it was given
+        // 3. Classifier/Response Generator
         const orchestrationClassifier = new OrchestrationClient({
             destination: destAI,
             llm: { model_name: "gpt-4o" },
             templating: {
                 template: [
-                    { role: "system", content: "You are an intent classifier for SAP C4C queries. Output JSON only…" },
-                    { role: "user", content: "{{?question}}" }
+                    {
+                        role: "system",
+                        content: `
+                        You are a SAP C4C response formatter.
+                        The user asked a question and we have retrieved raw C4C data.
+                        Your job is to create a helpful natural-language answer based on that data.
+                        Always respond in plain text, no JSON.
+                    `
+                    },
+                    {
+                        role: "user",
+                        content: `
+                        User question:
+                        {{?userQuestion}}
+
+                        C4C raw response (JSON):
+                        {{?c4cData}}
+                    `
+                    }
                 ]
             }
         });
 
-        let responseText, responseC4C;
-
+        let finalAnswer, responseC4C;
 
         // 4. Decide based on intent
         if (checkBONames(intentJson.businessobject)) {
 
+            //To get the response of the after getting the response in C4C.
             responseC4C = await _C4CApi(destC4C, intentJson);
+
+            // To ask AI to nicely format the C4C response
+            const formatted = await orchestrationClassifier.chatCompletion({
+                inputParams: {
+                    userQuestion: prompt,
+                    c4cData: JSON.stringify(responseC4C)
+                }
+            });
+
+            //To get the final answer.
+            finalAnswer = formatted.getContent();
 
         } else {
 
-            // fallback = general chat
-            const chatResp = await orchestration.chatCompletion({
-                inputParams: { question: prompt }
+            // General chat
+            const chatResp = await orchestrationClassifier.chatCompletion({
+                inputParams: { userQuestion: prompt, c4cData: "" }
             });
-            responseText = chatResp.getContent();
+
+            //To get the final answer.
+            finalAnswer = chatResp.getContent();
+
         }
 
         //6. Persist into local CAP entity
-        //const entry = { prompt, response: responseText, createdAt: new Date() };
-        //await INSERT.into(AICollection).entries(entry);
+        const entry = { prompt, response: finalAnswer, createdAt: new Date() };
+        await INSERT.into(AICollection).entries(entry);
 
-        //return responseText; // <--- return plain text (matches cds action returns String)
-        return "Here the response text should be displayed"
+        return finalAnswer; // <--- return plain text (matches cds action returns String)
+        //return "Here the response text should be displayed"
     });
 
     this.on("c4cConnection", async (req) => {
