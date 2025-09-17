@@ -1,5 +1,6 @@
 
 const utilFunctions = require("./service-query");
+const { TYPEREQUEST } = require("./type-operator");
 /**
  * to check the BO name
  * @param {*} BOName 
@@ -31,7 +32,7 @@ async function _C4CApi(destC4C, intentJson) {
     let res;
 
     // Call C4C OData API
-    if (operation === "read") {
+    if (operation === TYPEREQUEST.READ) {
         res = await utilFunctions.getC4CEntity(endpoint, destC4C, authHeader);
     } else {
         res = await utilFunctions.postC4CEntity(endpoint, intentJson.payload, destC4C, authHeader);
@@ -40,26 +41,8 @@ async function _C4CApi(destC4C, intentJson) {
     return res;
 }
 
-/**
- * To summarize the response
- * @param {*} orchestration 
- * @param {*} c4cResponse 
- * @param {*} label 
- * @returns 
- */
-async function _summarize(orchestration, c4cResponse, label) {
-
-    // Ask LLM to summarize
-    const summaryResp = await orchestration.chatCompletion({
-        inputParams: {
-            question: `Shows the field ${label} from: ${JSON.stringify(c4cResponse.slice(0, 5))}`
-        }
-    });
-    return summaryResp.getContent();
-}
 
 module.exports = {
     checkBONames,
-    _C4CApi,
-    _summarize
+    _C4CApi
 }

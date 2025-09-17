@@ -2,6 +2,7 @@ const cds = require("@sap/cds");
 const { OrchestrationClient } = require("@sap-ai-sdk/orchestration");
 const { getDestination } = require("@sap-cloud-sdk/connectivity");
 const { checkBONames, _C4CApi } = require("./util/service-functions");
+const { TYPEORCHCLIENT } = require("./util/type-operator");
 
 module.exports = cds.service.impl(async function () {
     const { AICollection } = this.entities;
@@ -30,78 +31,13 @@ module.exports = cds.service.impl(async function () {
                 template: [
                     {
                         role: "system",
-                        content: `
-          You are an intent extractor for SAP C4C queries.
-          Always return valid JSON only. No markdown, no explanations.
-
-          JSON schema:
-          {
-            "businessobject": "<accounts | contactPersons | salesQuotes | other>",
-            "service": "<account-service | contact-person-service | sales-quote-service | other>,
-            "operation": "<create | read | update | delete | search | chat>",
-            "task": "<short description>",
-            "select": ["<fieldName1>", "<fieldName2>", ...],
-            "filter": { "<fieldName1>": "<value1>", "<fieldName2>": "<value2>" },
-            "payload": { "<fieldName1>": "<value1>", "<fieldName2>": "<value2>" }
-          }
-
-          Rules:
-          - All keys and values for "businessobject" and "operation" must be lowercase.
-          - For READ: use "filter" for conditions, "select" for requested fields.
-          - For CREATE: fill only "payload".
-          - For general chat: businessobject="other", operation="chat", others empty.
-
-          Examples:
-
-          User: "Show me all sales quotes that have name Test"
-          Output: {
-            "businessobject": "salesQuotes",
-            "service": "sales-quote-service",
-            "operation": "read",
-            "task": "retrieve sales quotes with name Test",
-            "filter": { "name": "Test" },
-            "select": [],
-            "payload": {}
-          }
-
-          User: "Show me all sales quotes by name"
-          Output: {
-            "businessobject": "salesQuotes",
-            "service": "sales-quote-service",
-            "operation": "read",
-            "task": "retrieve sales quotes by name",
-            "filter": {},
-            "select": ["name"],
-            "payload": {}
-          }
-
-          User: "Create a new account with name Max Mustermann"
-          Output: {
-            "businessobject": "accounts",
-            "service": "account-service"
-            "operation": "create",
-            "task": "create new account",
-            "filter": {},
-            "select": [],
-            "payload": { "name": "Max Mustermann" }
-          }
-
-          User: "How's the weather today?"
-          Output: {
-            "businessobject": "other",
-            "service" : "other",
-            "operation": "chat",
-            "task": "general conversation",
-            "filter": {},
-            "select": [],
-            "payload": {}
-          }
-        `
+                        content: TYPEORCHCLIENT.content
                     },
                     { role: "user", content: "{{?question}}" }
                 ]
             }
         });
+
         // 3. To detect intent
         const inteResponse = await orchestration.chatCompletion({
             inputParams: {
@@ -126,12 +62,7 @@ module.exports = cds.service.impl(async function () {
                 template: [
                     {
                         role: "system",
-                        content: `
-                        You are a SAP C4C response formatter.
-                        The user asked a question and we have retrieved raw C4C data.
-                        Your job is to create a helpful natural-language answer based on that data.
-                        Always respond in plain text, no JSON.
-                    `
+                        content: TYPEORCHCLIENT.contentClassifier
                     },
                     {
                         role: "user",
