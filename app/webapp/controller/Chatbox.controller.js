@@ -119,18 +119,20 @@ sap.ui.define([
                             messages.push({
                                 sender: "user",
                                 message: item.prompt,
-                                timestamp: item.createdAt
+                                timestamp: item.createdAt,
+                                shouldNotReported: true
                             });
 
                             // AI response
                             messages.push({
                                 sender: "bot",
                                 message: item.response,
-                                timestamp: item.createdAt
+                                timestamp: item.createdAt,
+                                shouldNotReported: item.isReport ? false : true
                             });
                         });
 
-
+                        console.log(messages)
                         that.getView().getModel("chatBotModel").setData({ messages });
 
                         // ✅ Clear the input field after sending

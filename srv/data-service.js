@@ -109,8 +109,20 @@ module.exports = cds.service.impl(async function () {
 
         }
 
+        //5. Check if the final response has [REPORT] -> TODO: make it in another function.
+        let isReport = false;
+
+        // Robust check: look for [REPORT] at the end, with or without trailing whitespace
+        const reportPattern = /\[REPORT\]\s*$/;
+
+        if (reportPattern.test(finalAnswer)) {
+            isReport = true;
+            // remove the marker so the user never sees it
+            finalAnswer = finalAnswer.replace(reportPattern, '').trim();
+        }
+
         //6. Persist into local CAP entity
-        const entry = { prompt, response: finalAnswer, createdAt: new Date() };
+        const entry = { prompt, response: finalAnswer, isReport: isReport, createdAt: new Date() };
         await INSERT.into(AICollection).entries(entry);
 
         return finalAnswer; // <--- return plain text (matches cds action returns String)
