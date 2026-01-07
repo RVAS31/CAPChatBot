@@ -1,14 +1,3 @@
-const TYPE = {
-  EQ: '=',
-  NE: '!=',
-  GT: '>',
-  GE: '>=',
-  LT: '<',
-  LE: '<=',
-  AND: 'and',
-  OR: 'or'
-}
-
 const TYPEREQUEST = {
   READ: 'read',
   CREATE: 'create'
@@ -130,7 +119,6 @@ const TYPEORCHCLIENT = {
 
 
 module.exports = {
-  TYPE,
   TYPEREQUEST,
   TYPEORCHCLIENT
 }

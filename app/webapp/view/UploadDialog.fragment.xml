@@ -1,0 +1,43 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:upload="sap.m.upload"
+    controllerName="app.controller.Chatbox"
+>
+    <Dialog
+        id="dialog"
+        title="{i18n>uploadDialogTitle}"
+    >
+        <content>
+            <upload:UploadSet
+                id="UploadSet"
+                instantUpload="true"
+                showIcons="false"
+                terminationEnabled="true"
+                fileTypes="csv"
+                maxFileNameLength="50"
+                maxFileSize="200"
+                mode="None"
+                multiple="false"
+                uploadEnabled="{appViewModel>/setUploadEnabled}"
+                afterItemAdded=".onAfterItemAdded"
+                afterItemRemoved=".onAfterItemRemoved"
+            >
+            </upload:UploadSet>
+        </content>
+        <beginButton>
+            <Button id="_IDGenButton1"
+                press=".onSave"
+                type="Emphasized"
+                text="{i18n>uploadSave}"
+            />
+        </beginButton>
+        <endButton>
+            <Button id="_IDGenButton2"
+                press=".onCancel"
+                type="Transparent"
+                text="{i18n>uploadCancel}"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

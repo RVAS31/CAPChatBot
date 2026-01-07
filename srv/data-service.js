@@ -129,6 +129,17 @@ module.exports = cds.service.impl(async function () {
         //return "Here the response text should be displayed"
     });
 
+    this.on('getResponseById', async (req) => {
+        const { ID } = req.data;
+        console.log("here the ID", ID)
+        if (!ID) return req.reject(400, 'Parameter ID is required');
+
+        const row = await SELECT.one.from(AICollection).columns('response').where({ ID });
+        if (!row) return req.reject(404, `Prompt not found for ID: ${ID}`);
+
+        return row.response;
+    });
+
     this.on("c4cConnection", async (req) => {
 
         const destC4C = await getDestination({ destinationName: "CloudV2" });

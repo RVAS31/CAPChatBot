@@ -16,6 +16,9 @@
                 showSeparators="None"
                 busyIndicatorDelay="0"
                 updateFinished=".onChatListUpdateFinished"
+                growing="true"
+                growingScrollToLoad="true"
+                growingThreshold="30"
             >
                 <CustomListItem id="_IDGenCustomListItem">
                     <!-- Bind justifyContent to sender: user -> End (right), bot -> Start (left) -->
@@ -56,7 +59,14 @@
                                 press=".onDownloadReport"
                                 visible="{= !${chatBotModel>shouldNotReported}}"
                                 class="sapUiTinyMarginTop sapUiTinyMarginEnd"
-                            />
+                            >
+                                <customData>
+                                    <core:CustomData
+                                        key="reportId"
+                                        value="{chatBotModel>id}"
+                                    />
+                                </customData>
+                            </Button>
                         </VBox>
                     </HBox>
                 </CustomListItem>
@@ -71,6 +81,11 @@
                     liveChange="onLiveChange"
                     change=".onAskAI"
                     valueLiveUpdate="true"
+                />
+                <Button
+                    id="uploadButtonToCloud"
+                    icon="sap-icon://upload-to-cloud"
+                    press=".onUpload"
                 />
                 <Button
                     id="sendButton"
