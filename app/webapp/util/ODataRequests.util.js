@@ -1,7 +1,5 @@
 sap.ui.define([
-    "sap/ui/model/Filter",
-    "sap/ui/model/FilterOperator",
-], function (Filter, FilterOperator) {
+], function () {
     "use strict";
 
     return {
@@ -55,8 +53,44 @@ sap.ui.define([
                 console.error("OData V4 action execution error:", error);
                 throw error;
             }
-        }
+        },
 
+        /**
+         * Calls an unbound CAP OData V4 action that takes an ID (UUID) and returns something
+         * (e.g., String { value: "..." } or an object/entity).
+         *
+         * Example action: ChatService.getResponseById(ID: UUID) returns String
+         * Example payload: { ID: "f3c2..." }
+         *
+         * @param {sap.ui.model.odata.v4.ODataModel} oDataModel - The OData V4 model instance
+         * @param {string} sActionName - The action name (e.g., "getResponseById", "getPromptById")
+         * @param {{ ID: string }} oPayload - Must contain the action parameter ID
+         * @returns {Promise<any>} - The action result (string for primitive returns, object otherwise)
+         */
+        callUnboundActionWithId: async function (oDataModel, sActionName, oPayload) {
+            try {
+                const oActionBinding = oDataModel.bindContext(`/${sActionName}(...)`);
+
+                if (oPayload && oPayload.ID) {
+                    oActionBinding.setParameter("ID", oPayload.ID);
+                } else {
+                    throw new Error("Missing required parameter: ID");
+                }
+
+                await oActionBinding.execute();
+
+                const oResponse = oActionBinding.getBoundContext().getObject();
+                console.log("Action response:", oResponse);
+
+                // CAP primitives typically come back as { value: ... }
+                return (oResponse && Object.prototype.hasOwnProperty.call(oResponse, "value"))
+                    ? oResponse.value
+                    : oResponse;
+            } catch (error) {
+                console.error("OData V4 action execution error:", error);
+                throw error;
+            }
+        }
 
     };
 });

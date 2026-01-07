@@ -1,7 +1,9 @@
 <mvc:View
     controllerName="app.controller.Chatbox"
     xmlns="sap.m"
+    xmlns:m="sap.m"
     xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
 >
     <Page
         id="chatPage"
@@ -14,30 +16,57 @@
                 showSeparators="None"
                 busyIndicatorDelay="0"
                 updateFinished=".onChatListUpdateFinished"
+                growing="true"
+                growingScrollToLoad="true"
+                growingThreshold="30"
             >
                 <CustomListItem id="_IDGenCustomListItem">
                     <!-- Bind justifyContent to sender: user -> End (right), bot -> Start (left) -->
-                    <HBox id="_IDGenHBox"
+                    <HBox
+                        id="_IDGenHBox"
                         width="100%"
                         justifyContent="{= ${chatBotModel>sender} === 'user' ? 'End' : 'Start' }"
                     >
                         <!-- Return ALL classes from one expression -->
-                        <VBox id="_IDGenVBox"
+                        <VBox
+                            id="_IDGenVBox"
                             class="sapUiSmallMargin userBubble"
                         >
+                            <core:Icon
+                                id="_IDGenIcon"
+                                src="{= ${chatBotModel>sender} === 'user' ? 'sap-icon://person-placeholder' : 'sap-icon://ai' }"
+                                size="1rem"
+                                class="sapUiTinyMargin"
+                            />
                             <!-- (alignSelf is optional now; justifyContent already handles left/right) -->
-                            <Text id="_IDGenText1"
+                            <Text
+                                id="_IDGenText1"
                                 text="{chatBotModel>message}"
                                 class="sapUiTinyMargin"
                                 wrapping="true"
                             />
-                            <Text id="_IDGenText2"
+                            <Text
+                                id="_IDGenText2"
                                 text="{
                 path: 'chatBotModel>timestamp',
                 formatter: '.formatter.formatCreatedAt'
             }"
                                 class="sapUiTinyMarginTop sapUiTinyMarginEnd"
                             />
+                            <Button
+                                id="_IDGenButton"
+                                icon="sap-icon://manager-insight"
+                                press=".onDownloadReport"
+                                visible="{= !${chatBotModel>shouldNotReported}}"
+                                class="sapUiTinyMarginTop sapUiTinyMarginEnd"
+                            >
+                                <customData>
+                                    <core:CustomData
+                                        key="reportId"
+                                        value="{chatBotModel>id}"
+                                    />
+                                </customData>
+                            </Button>
                         </VBox>
                     </HBox>
                 </CustomListItem>
@@ -52,6 +81,11 @@
                     liveChange="onLiveChange"
                     change=".onAskAI"
                     valueLiveUpdate="true"
+                />
+                <Button
+                    id="uploadButtonToCloud"
+                    icon="sap-icon://upload-to-cloud"
+                    press=".onUpload"
                 />
                 <Button
                     id="sendButton"
