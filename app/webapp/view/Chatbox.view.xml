@@ -10,89 +10,157 @@
         title="Chat"
     >
         <content>
-            <List
-                id="chatList"
-                items="{chatBotModel>/messages}"
-                showSeparators="None"
-                busyIndicatorDelay="0"
-                updateFinished=".onChatListUpdateFinished"
-                growing="true"
-                growingScrollToLoad="true"
-                growingThreshold="30"
+            <VBox
+                id="_IDGenVBox"
+                height="100%"
+                width="100%"
             >
-                <CustomListItem id="_IDGenCustomListItem">
-                    <!-- Bind justifyContent to sender: user -> End (right), bot -> Start (left) -->
-                    <HBox
-                        id="_IDGenHBox"
-                        width="100%"
-                        justifyContent="{= ${chatBotModel>sender} === 'user' ? 'End' : 'Start' }"
-                    >
-                        <!-- Return ALL classes from one expression -->
-                        <VBox
-                            id="_IDGenVBox"
-                            class="sapUiSmallMargin userBubble"
+                <List
+                    id="chatList"
+                    items="{chatBotModel>/messages}"
+                    showSeparators="None"
+                    busyIndicatorDelay="0"
+                    updateFinished=".onChatListUpdateFinished"
+                    growing="true"
+                    growingScrollToLoad="true"
+                    growingThreshold="30"
+                    width="100%"
+                >
+                    <!-- your existing CustomListItem template unchanged -->
+                    <CustomListItem id="_IDGenCustomListItem">
+                        <HBox
+                            id="_IDGenHBox3"
+                            width="100%"
+                            justifyContent="{= ${chatBotModel>sender} === 'user' ? 'End' : 'Start' }"
                         >
-                            <core:Icon
-                                id="_IDGenIcon"
-                                src="{= ${chatBotModel>sender} === 'user' ? 'sap-icon://person-placeholder' : 'sap-icon://ai' }"
-                                size="1rem"
-                                class="sapUiTinyMargin"
-                            />
-                            <!-- (alignSelf is optional now; justifyContent already handles left/right) -->
-                            <Text
-                                id="_IDGenText1"
-                                text="{chatBotModel>message}"
-                                class="sapUiTinyMargin"
-                                wrapping="true"
-                            />
-                            <Text
-                                id="_IDGenText2"
-                                text="{
+                            <VBox
+                                id="_IDGenVBox2"
+                                class="sapUiSmallMargin userBubble"
+                            >
+                                <core:Icon
+                                    id="_IDGenIcon"
+                                    src="{= ${chatBotModel>sender} === 'user' ? 'sap-icon://person-placeholder' : 'sap-icon://ai' }"
+                                    size="1rem"
+                                    class="sapUiTinyMargin"
+                                />
+                                <Text
+                                    id="_IDGenText1"
+                                    text="{chatBotModel>message}"
+                                    class="sapUiTinyMargin"
+                                    wrapping="true"
+                                />
+                                <Text
+                                    id="_IDGenText2"
+                                    text="{
                 path: 'chatBotModel>timestamp',
                 formatter: '.formatter.formatCreatedAt'
-            }"
-                                class="sapUiTinyMarginTop sapUiTinyMarginEnd"
-                            />
-                            <Button
-                                id="_IDGenButton"
-                                icon="sap-icon://manager-insight"
-                                press=".onDownloadReport"
-                                visible="{= !${chatBotModel>shouldNotReported}}"
-                                class="sapUiTinyMarginTop sapUiTinyMarginEnd"
-                            >
-                                <customData>
-                                    <core:CustomData
-                                        key="reportId"
-                                        value="{chatBotModel>id}"
-                                    />
-                                </customData>
-                            </Button>
-                        </VBox>
+              }"
+                                    class="sapUiTinyMarginTop sapUiTinyMarginEnd"
+                                />
+                                <Button
+                                    id="_IDGenButton"
+                                    icon="sap-icon://manager-insight"
+                                    press=".onDownloadReport"
+                                    visible="{= !${chatBotModel>shouldNotReported}}"
+                                    class="sapUiTinyMarginTop sapUiTinyMarginEnd"
+                                >
+                                    <customData>
+                                        <core:CustomData
+                                            key="reportId"
+                                            value="{chatBotModel>id}"
+                                        />
+                                    </customData>
+                                </Button>
+                            </VBox>
+                        </HBox>
+                    </CustomListItem>
+                </List>
+
+                <!-- Attachment strip ABOVE footer (always visible, no clipping) -->
+                <HBox
+                    id="_IDGenHBox4"
+                    visible="{= !!${chatBotModel>/pendingAttachment} }"
+                    width="100%"
+                    alignItems="Center"
+                    justifyContent="SpaceBetween"
+                    class="sapUiSmallMarginTop sapUiSmallMarginBottom sapUiSmallMarginBegin sapUiSmallMarginEnd"
+                >
+                    <HBox
+                        id="_IDGenHBox5"
+                        alignItems="Center"
+                    >
+                        <core:Icon
+                            id="_IDGenIcon2"
+                            src="sap-icon://attachment"
+                            class="sapUiTinyMarginEnd"
+                        />
+                        <Text
+                            id="_IDGenText3"
+                            text="{= 'Attached: ' + ${chatBotModel>/pendingAttachment/fileName} }"
+                        />
                     </HBox>
-                </CustomListItem>
-            </List>
+
+                    <Button
+                        id="_IDGenButton4"
+                        icon="sap-icon://decline"
+                        type="Transparent"
+                        tooltip="Remove attachment"
+                        press=".onRemoveAttachment"
+                    />
+                </HBox>
+            </VBox>
         </content>
 
         <footer>
-            <Toolbar id="_IDGenToolbar1">
+            <OverflowToolbar
+                id="_IDGenOverflowToolbar"
+                width="100%"
+            >
                 <Input
                     id="messageInput"
                     placeholder="Type your message..."
                     liveChange="onLiveChange"
-                    change=".onAskAI"
                     valueLiveUpdate="true"
-                />
+                    value="{chatBotModel>/currentPrompt}"
+                >
+                    <layoutData>
+                        <!-- Input should shrink, and should never go to overflow -->
+                        <OverflowToolbarLayoutData
+                            id="_IDGenOverflowToolbarLayoutData1"
+                            shrinkable="true"
+                            priority="NeverOverflow"
+                        />
+                    </layoutData>
+                </Input>
+
+                <ToolbarSpacer id="_IDGenToolbarSpacer" />
+
                 <Button
                     id="uploadButtonToCloud"
                     icon="sap-icon://upload-to-cloud"
                     press=".onUpload"
-                />
+                >
+                    <layoutData>
+                        <OverflowToolbarLayoutData
+                            id="_IDGenOverflowToolbarLayoutData2"
+                            priority="High"
+                        />
+                    </layoutData>
+                </Button>
+
                 <Button
                     id="sendButton"
                     icon="sap-icon://paper-plane"
                     press=".onAskAI"
-                />
-            </Toolbar>
+                >
+                    <layoutData>
+                        <OverflowToolbarLayoutData
+                            id="_IDGenOverflowToolbarLayoutData3"
+                            priority="High"
+                        />
+                    </layoutData>
+                </Button>
+            </OverflowToolbar>
         </footer>
     </Page>
 </mvc:View>
