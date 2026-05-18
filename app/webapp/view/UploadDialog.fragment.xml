@@ -12,29 +12,30 @@
             <upload:UploadSet
                 id="UploadSet"
                 instantUpload="true"
+                uploadEnabled="true"
                 showIcons="false"
                 terminationEnabled="true"
-                fileTypes="csv"
+                fileTypes="txt,docx"
                 maxFileNameLength="50"
                 maxFileSize="200"
                 mode="None"
                 multiple="false"
-                uploadEnabled="{appViewModel>/setUploadEnabled}"
                 afterItemAdded=".onAfterItemAdded"
                 afterItemRemoved=".onAfterItemRemoved"
-            >
-            </upload:UploadSet>
+            />
         </content>
         <beginButton>
-            <Button id="_IDGenButton1"
-                press=".onSave"
+            <Button
+                id="_IDGenButton1"
+                press=".onSaveDocument"
                 type="Emphasized"
                 text="{i18n>uploadSave}"
             />
         </beginButton>
         <endButton>
-            <Button id="_IDGenButton2"
-                press=".onCancel"
+            <Button
+                id="_IDGenButton2"
+                press=".onCancelUpload"
                 type="Transparent"
                 text="{i18n>uploadCancel}"
             />

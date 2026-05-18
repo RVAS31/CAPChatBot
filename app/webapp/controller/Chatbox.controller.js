@@ -69,7 +69,9 @@ sap.ui.define([
 
                 that.getView().setModel(oViewModel, "ChatBotViewModel");
                 const oChatModel = new sap.ui.model.json.JSONModel({
-                    messages: []
+                    messages: [],
+                    currentPrompt: "",
+                    pendingAttachment: null
                 });
 
                 oChatModel.setSizeLimit(5000); // to increase limit
@@ -137,6 +139,103 @@ sap.ui.define([
 
                 }.bind(that));
             },
+
+            /**
+             * To read file as base 64
+             * @param {*} oFile 
+             * @returns 
+             */
+            _readFileAsBase64: function (oFile) {
+                return new Promise((resolve, reject) => {
+                    const oReader = new FileReader();
+                    oReader.onload = () => {
+                        const sDataUrl = oReader.result; // data:<mime>;base64,xxxx
+                        const sBase64 = sDataUrl.split("base64,")[1] || "";
+                        resolve(sBase64);
+                    };
+                    oReader.onerror = reject;
+                    oReader.readAsDataURL(oFile);
+                });
+            },
+
+            /**
+             * To save the document 
+             * @returns 
+             */
+            onSaveDocument: async function () {
+                try {
+
+                    let that = this;
+                    const oUploadSet = that.byId("UploadSet");
+
+                    // With instantUpload=false, new files are usually in "incompleteItems"
+                    const aItems = oUploadSet.getIncompleteItems().length
+                        ? oUploadSet.getIncompleteItems()
+                        : oUploadSet.getItems();
+
+                    if (!aItems || aItems.length === 0) {
+                        sap.m.MessageToast.show("Please add a TXT or DOCX file.");
+                        return;
+                    }
+
+                    // single file MVP
+                    const oItem = aItems[0];
+                    const oFile = oItem.getFileObject();
+
+                    if (!oFile) {
+                        sap.m.MessageToast.show("Selected file is not accessible.");
+                        return;
+                    }
+
+                    // Optional: enforce types also here
+                    const sName = (oFile.name || "").toLowerCase();
+                    if (!(sName.endsWith(".txt") || sName.endsWith(".docx"))) {
+                        sap.m.MessageToast.show("Only TXT and DOCX are supported.");
+                        return;
+                    }
+
+                    const sBase64 = await that._readFileAsBase64(oFile);
+
+                    const oDataAIModel = that.getOwnerComponent().getModel("AIOdataModel");
+
+                    const documentId = await ODataRequests.callUnboundActionV4(oDataAIModel, "uploadTextDocument", {
+                        fileName: oFile.name,
+                        mimeType: oFile.type || "",
+                        contentBase64: sBase64
+                    });
+
+                    if (!documentId) {
+                        throw new Error("uploadTextDocument returned no documentId");
+                    }
+
+                    const oChatModel = that.getView().getModel("chatBotModel");
+                    oChatModel.setProperty("/pendingAttachment", {
+                        documentId,
+                        fileName: oFile.name,
+                        mimeType: oFile.type || "",
+                        size: oFile.size
+                    });
+
+                    oUploadSet.removeAllItems();
+
+                    sap.m.MessageToast.show("Document attached. Now type your question and press Send.");
+                    that.byId("messageInput")?.focus();
+
+                } catch (err) {
+                    console.error(err);
+                    sap.m.MessageToast.show(`Attachment failed: ${err.message || err}`);
+                }
+            },
+
+            /**
+             * To cancel the upload
+             */
+            onCancelUpload: function () {
+                let that = this;
+                const oUploadSet = that.byId("UploadSet");
+                oUploadSet.removeAllItems();
+            },
+
 
             /** 
              * Updates the chatbox model with the newest SAP CX data
@@ -222,20 +321,33 @@ sap.ui.define([
             /**
              * To ask AI 
              */
-            onAskAI: function () {
+            onAskAI: async function () {
+
                 let that = this;
                 const oDataAIModel = that.getOwnerComponent().getModel("AIOdataModel");
-                let sPrompt = that.getView().getModel("ChatBotViewModel").getProperty("/text");;
-                sPrompt = sPrompt.trim();
+                const oChatModel = this.getView().getModel("chatBotModel");
 
+                let sPrompt = (oChatModel.getProperty("/currentPrompt") || "").trim();
                 if (!sPrompt) {
                     sap.m.MessageToast.show("Please type a message first.");
                     return;
                 }
 
+                const oPending = oChatModel.getProperty("/pendingAttachment");
+                const documentId = oPending?.documentId || null;
+
                 try {
-                    const sResponse = ODataRequests.onCreateItemWithAction(oDataAIModel, "askAI", { prompt: sPrompt });
+                    // Call CAP action askAI (extend your CDS to accept documentId)
+                    const sResponse = await ODataRequests.onCreateItemWithAction(oDataAIModel, "askAI", {
+                        prompt: sPrompt,
+                        documentId: documentId // only if you add it to the action signature
+                    });
+
+                    // clear input + attachment after send
+                    oChatModel.setProperty("/currentPrompt", "");
+                    oChatModel.setProperty("/pendingAttachment", null);
                     that._updateChatBot();
+
                 } catch (err) {
                     sap.m.MessageBox.error("Failed to call AI: " + err.message);
                 }
@@ -269,9 +381,6 @@ sap.ui.define([
                 const sReportId = oButton.data("reportId");
                 const oDataAIModel = that.getOwnerComponent().getModel("AIOdataModel");
 
-                // Now you have the value
-                console.log("Report ID:", sReportId);
-
                 // To check if the reportId is given
                 if (!sReportId) {
                     sap.m.MessageToast.show("an ID has not been found");
@@ -302,6 +411,26 @@ sap.ui.define([
                 } catch (err) {
                     sap.m.MessageBox.error("Failed to call HANA DB: " + err.message);
                 }
+            },
+
+            /**
+             * To remove the attachment
+             */
+            onRemoveAttachment: function () {
+                let that = this;
+                that.getView().getModel("chatBotModel").setProperty("/pendingAttachment", null);
+            },
+
+            onAfterItemAdded: function () {
+                let that = this;
+                that.byId("_IDGenButton1").setEnabled(true); // your Save button id
+            },
+
+            onAfterItemRemoved: function () {
+                let that = this;
+                const oUploadSet = this.byId("UploadSet");
+                const hasItems = oUploadSet.getIncompleteItems().length || oUploadSet.getItems().length;
+                that.byId("_IDGenButton1").setEnabled(!!hasItems);
             }
 
 

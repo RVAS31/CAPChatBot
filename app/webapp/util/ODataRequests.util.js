@@ -30,25 +30,20 @@ sap.ui.define([
          * @param {Object} oPayload - The body of the request, must contain the action parameters
          * @returns {Promise<any>} - The action result
          */
-        onCreateItemWithAction: async function (oDataModel, sActionName, oPayload) {
+        onCreateItemWithAction: async function (oDataModel, sActionName, oPayload = {}) {
             try {
-                // 1. Bind to the unbound action (unbound actions are always root-level)
                 const oActionBinding = oDataModel.bindContext(`/${sActionName}(...)`);
 
-                // 2. Set input parameters (in your case: prompt)
-                if (oPayload && oPayload.prompt) {
-                    oActionBinding.setParameter("prompt", oPayload.prompt);
-                }
+                Object.keys(oPayload).forEach((k) => {
+                    if (oPayload[k] !== undefined) {
+                        oActionBinding.setParameter(k, oPayload[k]);
+                    }
+                });
 
-                // 3. Execute the action
                 await oActionBinding.execute();
 
-                // 4. Get the response (for unbound actions returning String: { value: "..." })
                 const oResponse = oActionBinding.getBoundContext().getObject();
-
-                console.log("Action response:", oResponse);
-
-                return oResponse?.value; // Return just the string
+                return oResponse?.value ?? oResponse;
             } catch (error) {
                 console.error("OData V4 action execution error:", error);
                 throw error;
@@ -90,7 +85,43 @@ sap.ui.define([
                 console.error("OData V4 action execution error:", error);
                 throw error;
             }
-        }
+        },
+
+        /**
+         * Calls an unbound action on a CAP OData V4 service.
+         *
+         * @param {sap.ui.model.odata.v4.ODataModel} oDataModel - The OData V4 model instance
+         * @param {string} sActionName - The action name (e.g., "askAI", "uploadTextDocument")
+         * @param {Object} [mParams] - Key/value map of action parameters
+         * @returns {Promise<any>} - Returns primitive value (oResponse.value) when present; otherwise returns full response object.
+         */
+        callUnboundActionV4: async function (oDataModel, sActionName, mParams = {}) {
+            try {
+                const oActionBinding = oDataModel.bindContext(`/${sActionName}(...)`);
+
+                // Set all provided parameters dynamically
+                Object.keys(mParams).forEach((sKey) => {
+                    // Skip undefined so we don't accidentally send empty params
+                    if (mParams[sKey] !== undefined) {
+                        oActionBinding.setParameter(sKey, mParams[sKey]);
+                    }
+                });
+
+                await oActionBinding.execute();
+
+                const oResponse = oActionBinding.getBoundContext().getObject();
+
+                // CAP typically wraps primitive returns as { value: ... }
+                return (oResponse && Object.prototype.hasOwnProperty.call(oResponse, "value"))
+                    ? oResponse.value
+                    : oResponse;
+
+            } catch (error) {
+                console.error(`OData V4 action execution error (${sActionName}):`, error);
+                throw error;
+            }
+        },
+
 
     };
 });
