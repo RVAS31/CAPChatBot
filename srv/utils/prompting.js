@@ -11,7 +11,7 @@ You will receive:
 Return JSON with this schema:
 {
   "hasDocument": <true|false>,
-  "activity": "<crm | doc_summary | doc_extract | doc_qa | draft_email | next_best_action | chat>",
+  "activity": "<crm | crm_attachment_analysis | doc_summary | doc_extract | doc_qa | draft_email | next_best_action | chat>",
   "confidence": <0.0-1.0>,
 
   "businessobject": "<accounts | contactPersons | salesQuotes | other>",
@@ -29,14 +29,20 @@ Rules:
 - true if the attached document text is non-empty, otherwise false.
 
 2) activity routing:
+
+- If the user asks to analyze, summarize, extract, review, or recommend actions for a CRM attachment/file/document linked to a CRM object (sales quote, account, opportunity, etc.) -> activity="crm_attachment_analysis".
+
 - If the user explicitly asks about the attached document:
   - summarize, summary, overview -> activity="doc_summary"
   - extract fields, identify key information, structured data, customer/order/product/urgency -> activity="doc_extract"
   - answer questions, explain, clarify, what does it say -> activity="doc_qa"
   - draft/write/prepare a reply email -> activity="draft_email"
   - what should I do next, next steps, recommended actions, follow-up actions, prioritization, risk handling, escalation -> activity="next_best_action"
+
 - If the user asks for SAP C4C data operations (show/create/update/delete/search accounts/contactPersons/salesQuotes) -> activity="crm".
+
 - If it is general conversation not requiring C4C or document -> activity="chat".
+
 - If unsure: activity="chat", confidence <= 0.5, businessobject="other", operation="chat".
 
 3) Naming Sensitivity Rules for CRM:
@@ -141,6 +147,42 @@ Output:
   "operation": "chat",
   "task": "recommend next best actions based on attached document",
   "filter": {},
+  "select": [],
+  "payload": {}
+}
+
+User question: "Analyze the attachment of the sales quote with displayId 35"
+Document text:""
+Output:
+{
+  "hasDocument": false,
+  "activity": "crm_attachment_analysis",
+  "confidence": 0.92,
+  "businessobject": "salesQuotes",
+  "service": "sales-quote-service",
+  "operation": "read",
+  "task": "analyze attachment of sales quote displayId 35",
+  "filter": {
+    "displayId": "35"
+  },
+  "select": [],
+  "payload": {}
+}
+
+User question: "Recommend next actions based on the latest attachment of quote 40"
+Document text:""
+Output:
+{
+  "hasDocument": false,
+  "activity": "crm_attachment_analysis",
+  "confidence": 0.91,
+  "businessobject": "salesQuotes",
+  "service": "sales-quote-service",
+  "operation": "read",
+  "task": "recommend next actions based on latest attachment of sales quote 40",
+  "filter": {
+    "displayId": "40"
+  },
   "select": [],
   "payload": {}
 }
@@ -287,6 +329,43 @@ Intent JSON:
 {{?intentJson}}
 
 Attached document:
+{{?documentText}}
+`.trim()
+  },
+  crmAttachmentFollowUpRouter: {
+    content_system: `
+You are a router for an SAP CRM attachment analysis agent.
+You receive:
+- The original user request
+- The CRM intent JSON
+- The extracted text of the CRM attachment
+
+Decide which document skill should be executed next.
+
+Return VALID JSON ONLY. No markdown. No explanations.
+
+Schema:
+{
+  "followUpSkill": "<doc_extract | doc_qa | draft_email | next_best_action>",
+  "confidence": <0.0-1.0>,
+  "reason": "<short reason>"
+}
+
+Routing rules:
+- Use "next_best_action" if the user asks what to do next, next steps, recommended actions, prioritization, risks, escalation, or follow-up actions.
+- Use "doc_extract" if the user asks to extract fields, structured information, key data, customer/order/product/urgency, or important CRM-relevant details.
+- Use "draft_email" if the user asks to write, draft, prepare, or formulate an email/reply.
+- Use "doc_qa" if the user asks to analyze, summarize, review, explain, check, or answer questions about the attachment in general.
+- If unsure, use "doc_qa" with confidence <= 0.5.
+`.trim(),
+    content_user: `
+Original user request:
+{{?question}}
+
+Intent JSON:
+{{?intentJson}}
+
+Extracted CRM attachment text:
 {{?documentText}}
 `.trim()
   },

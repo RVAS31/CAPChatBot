@@ -27,5 +27,8 @@ module.exports = async function crmQuery(ctx) {
         }
     });
 
+    console.log("prompt:", prompt);
+    console.log("Formatted response:", formatted.getContent());
+
     return formatted.getContent();
 };
