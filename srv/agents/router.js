@@ -3,9 +3,14 @@ export function route(intentJson, ctx) {
     const activity = (intentJson.activity || "").toLowerCase();
     const hasDocument = !!ctx?.hasDocument;
 
+    // CRM attachment flow must come before normal CRM path
+    if (activity === "crm_attachment_analysis") {
+        return "crmAttachmentAnalysis";
+    }
+
     //To document skill base
     if (hasDocument) {
-        
+
         if (activity === "next_best_action") {
             return "nextBestAction";
         }

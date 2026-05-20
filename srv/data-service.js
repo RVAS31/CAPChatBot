@@ -25,7 +25,9 @@ module.exports = cds.service.impl(function () {
         OrchestrationClient,
         prompts,
         _C4CApi,
-        checkBONames
+        checkBONames,
+        JSZip,
+        uuidv4
     });
 
     registerUploadTextDocument(this, {

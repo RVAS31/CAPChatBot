@@ -1,6 +1,7 @@
 const { loadDocText } = require("../utils/docContext");
 const { extractReportMarker } = require("../utils/reportMarker");
 const { route } = require("../agents/router");
+const { normalizeIntentFromPrompt } = require("../agents/intentNormalizer");
 
 const crmQuery = require("../skills/crmQuery");
 const generalChat = require("../skills/generalChat");
@@ -8,6 +9,7 @@ const docQa = require("../skills/docQa");
 const draftEmail = require("../skills/draftEmail");
 const docExtract = require("../skills/docExtract");
 const nextBestAction = require("../skills/nextBestAction");
+const crmAttachmentAnalysis = require("../skills/crmAttachmentAnalysis"); 
 
 
 module.exports = function registerAskAI(srv, deps) {
@@ -18,22 +20,20 @@ module.exports = function registerAskAI(srv, deps) {
         getDestination,
         OrchestrationClient,
         prompts,
-        _C4CApi
+        _C4CApi,
+        JSZip,      
+        uuidv4      
     } = deps;
 
     srv.on("askAI", async (req) => {
-
         const { prompt, documentId } = req.data;
 
-        // Get the destinations
         const destAI = await getDestination({ destinationName: "ai-core-destination-btp" });
         const destC4C = await getDestination({ destinationName: "CloudV2" });
 
-        //To check if destination exists
         if (!destC4C) req.error(500, "C4C destination not found");
         if (!destAI) req.error(500, "AI Core destination not found");
 
-        // Load optional document text
         const docText = await loadDocText({ Documents, documentId });
 
         const orchestration = new OrchestrationClient({
@@ -42,10 +42,7 @@ module.exports = function registerAskAI(srv, deps) {
             templating: {
                 template: [
                     { role: "system", content: prompts.askAI.content_system },
-                    {
-                        role: "user",
-                        content: prompts.askAI.content_user
-                    }
+                    { role: "user", content: prompts.askAI.content_user }
                 ]
             }
         });
@@ -72,25 +69,22 @@ module.exports = function registerAskAI(srv, deps) {
             };
         }
 
-        console.log("Intent JSON:", intentJson);
-        console.log("Document Text:", docText);
+        intentJson = normalizeIntentFromPrompt(prompt, intentJson);
 
-        //Agent Router
         const skillName = route(intentJson, { hasDocument: !!docText });
 
-        console.log("Selected skill:", skillName);
+        console.log("Routed to skill:", skillName, "with intent:", intentJson);
 
-        //Get the skills
         const skills = {
             crmQuery,
             generalChat,
             docQa,
             draftEmail,
             docExtract,
-            nextBestAction
+            nextBestAction,
+            crmAttachmentAnalysis 
         };
 
-        //Get the final answer from the asked skill
         const finalAnswer = await skills[skillName]({
             OrchestrationClient,
             destAI,
@@ -100,14 +94,15 @@ module.exports = function registerAskAI(srv, deps) {
             intentJson,
             docText,
             documentId,
+            Documents,         
             DocumentAnalysis,
+            JSZip,             
+            uuidv4,             
             _C4CApi
         });
 
-        //if a report exists
         const { cleanedText, isReport } = extractReportMarker(finalAnswer);
 
-        //To insert the data to AI collection
         await INSERT.into(AICollection).entries({
             prompt,
             response: cleanedText,
