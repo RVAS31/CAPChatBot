@@ -160,18 +160,29 @@ module.exports = async function crmAttachmentAnalysis(ctx) {
         DocumentAnalysis
     };
 
+    let text;
+
     switch (followUpSkill) {
         case "next_best_action":
-            return await nextBestAction(skillCtx);
+            text = await nextBestAction(skillCtx);
+            break;
 
         case "doc_extract":
-            return await docExtract(skillCtx);
+            text = await docExtract(skillCtx);
+            break;
 
         case "draft_email":
-            return await draftEmail(skillCtx);
+            text = await draftEmail(skillCtx);
+            break;
 
         case "doc_qa":
         default:
-            return await docQa(skillCtx);
+            text = await docQa(skillCtx);
+            break;
     }
+
+    return {
+        text,
+        documentId: internalDocumentId
+    };
 };

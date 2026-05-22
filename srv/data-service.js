@@ -14,13 +14,15 @@ const registerUploadTextDocument = require("./handlers/uploadTextDocument");
 const registerGetResponseById = require("./handlers/getResponseById");
 
 module.exports = cds.service.impl(function () {
-    const { AICollection, Documents, DocumentAnalysis } = this.entities;
+
+    const { AICollection, Documents, DocumentAnalysis, ConversationContext } = this.entities;
 
     // Register handlers
     registerAskAI(this, {
         AICollection,
         Documents,
         DocumentAnalysis,
+        ConversationContext,
         getDestination,
         OrchestrationClient,
         prompts,
