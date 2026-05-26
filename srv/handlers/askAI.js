@@ -11,6 +11,9 @@ const docExtract = require("../skills/docExtract");
 const nextBestAction = require("../skills/nextBestAction");
 const crmAttachmentAnalysis = require("../skills/crmAttachmentAnalysis");
 
+const { resolveSuggestedSkill } = require("../agents/suggestedSkillResolver");
+const { getDefaultDocumentSuggestions, formatSuggestions } = require("../agents/skillSuggestions");
+
 
 module.exports = function registerAskAI(srv, deps) {
     const {
@@ -89,21 +92,25 @@ module.exports = function registerAskAI(srv, deps) {
 
         intentJson = normalizeIntentFromPrompt(prompt, intentJson);
 
-        if (docText && /based on that|based on it|previous document|that document/i.test(prompt)) {
+        const suggestedSkill = resolveSuggestedSkill(prompt, sessionContext);
 
-            if (/email|reply|draft|write/i.test(prompt)) {
-                intentJson = {
-                    ...intentJson,
-                    hasDocument: true,
-                    activity: "draft_email",
-                    businessobject: "other",
-                    service: "other",
-                    operation: "chat",
-                    filter: {},
-                    select: [],
-                    payload: {}
-                };
-            }
+        if (suggestedSkill && docText) {
+            intentJson = {
+                hasDocument: true,
+                activity:
+                    suggestedSkill.skill === "draftEmail" ? "draft_email" :
+                        suggestedSkill.skill === "nextBestAction" ? "next_best_action" :
+                            suggestedSkill.skill === "docExtract" ? "doc_extract" :
+                                "doc_qa",
+                confidence: 0.99,
+                businessobject: "other",
+                service: "other",
+                operation: "chat",
+                task: suggestedSkill.prompt,
+                filter: {},
+                select: [],
+                payload: {}
+            };
         }
 
         console.log("SESSION:", sessionId);
@@ -112,7 +119,11 @@ module.exports = function registerAskAI(srv, deps) {
         console.log("DOC TEXT EXISTS:", !!docText);
         console.log("INTENT BEFORE ROUTE:", intentJson);
 
-        const skillName = route(intentJson, { hasDocument: !!docText });
+        let skillName = route(intentJson, { hasDocument: !!docText });
+
+        if (suggestedSkill?.skill) {
+            skillName = suggestedSkill.skill;
+        }
 
         console.log("Routed to skill:", skillName, "with intent:", intentJson);
 
@@ -155,9 +166,16 @@ module.exports = function registerAskAI(srv, deps) {
 
         const { cleanedText, isReport } = extractReportMarker(finalAnswer);
 
+        const suggestions = resultDocumentId ? getDefaultDocumentSuggestions() : [];
+
+        const finalTextWithSuggestions =
+            suggestions.length > 0
+                ? cleanedText + formatSuggestions(suggestions)
+                : cleanedText;
+
         await INSERT.into(AICollection).entries({
             prompt,
-            response: cleanedText,
+            response: finalTextWithSuggestions,
             isReport,
             createdAt: new Date()
         });
@@ -167,7 +185,8 @@ module.exports = function registerAskAI(srv, deps) {
                 ID: sessionContext?.ID || uuidv4(),
                 sessionId,
                 lastPrompt: prompt,
-                lastResponse: cleanedText,
+                lastResponse: finalTextWithSuggestions,
+                lastSuggestedSkills: JSON.stringify(suggestions),
                 lastDocument_ID: resultDocumentId || null,
                 lastActivity: intentJson.activity || null,
                 lastBusinessObject: intentJson.businessobject || null,
@@ -177,6 +196,6 @@ module.exports = function registerAskAI(srv, deps) {
             });
         }
 
-        return cleanedText;
+        return finalTextWithSuggestions;
     });
 };

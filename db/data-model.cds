@@ -38,4 +38,6 @@ entity ConversationContext : cuid {
 
   createdAt          : Timestamp;
   updatedAt          : Timestamp;
+
+  lastSuggestedSkills : LargeString;
 }
