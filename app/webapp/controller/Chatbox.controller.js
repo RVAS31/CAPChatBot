@@ -68,10 +68,12 @@ sap.ui.define([
                     });
 
                 that.getView().setModel(oViewModel, "ChatBotViewModel");
+
                 const oChatModel = new sap.ui.model.json.JSONModel({
                     messages: [],
                     currentPrompt: "",
-                    pendingAttachment: null
+                    pendingAttachment: null,
+                    sessionId: crypto.randomUUID()
                 });
 
                 oChatModel.setSizeLimit(5000); // to increase limit
@@ -301,10 +303,13 @@ sap.ui.define([
                         });
 
                         console.log("here the messages", messages)
-                        that.getView().getModel("chatBotModel").setData({ messages });
+                        const oChatModel = that.getView().getModel("chatBotModel");
 
-                        // ✅ Clear the input field after sending
-                        oInput.setValue("");
+                        // Only update messages
+                        oChatModel.setProperty("/messages", messages);
+
+                        // Clear input
+                        oChatModel.setProperty("/currentPrompt", "");
                     })
                     .catch((error) => {
 
@@ -335,12 +340,16 @@ sap.ui.define([
 
                 const oPending = oChatModel.getProperty("/pendingAttachment");
                 const documentId = oPending?.documentId || null;
+                const sessionId = oChatModel.getProperty("/sessionId");
+
+                console.log(sessionId, "sessionId in onAskAI")
 
                 try {
                     // Call CAP action askAI (extend your CDS to accept documentId)
                     const sResponse = await ODataRequests.onCreateItemWithAction(oDataAIModel, "askAI", {
                         prompt: sPrompt,
-                        documentId: documentId // only if you add it to the action signature
+                        documentId: documentId, // only if you add it to the action signature
+                        sessionId: sessionId
                     });
 
                     // clear input + attachment after send

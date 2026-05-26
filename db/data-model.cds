@@ -25,3 +25,19 @@ entity DocumentAnalysis : cuid {
   createdAt : Timestamp;
   model     : String;
 }
+
+entity ConversationContext : cuid {
+  sessionId          : String;
+  lastPrompt         : LargeString;
+  lastResponse       : LargeString;
+
+  lastDocument       : Association to Documents;
+  lastActivity       : String;
+  lastBusinessObject : String;
+  lastObjectId       : String;
+
+  createdAt          : Timestamp;
+  updatedAt          : Timestamp;
+
+  lastSuggestedSkills : LargeString;
+}
