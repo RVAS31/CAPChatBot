@@ -32,7 +32,7 @@ module.exports = function registerAskAI(srv, deps) {
     srv.on("askAI", async (req) => {
         const { prompt, documentId, sessionId } = req.data;
 
-        const destAI = await getDestination({ destinationName: "ai-core-destination-btp" });
+        const destAI = await getDestination({ destinationName: "ai-core-destination-chatboxcloudv2" });
         const destC4C = await getDestination({ destinationName: "CloudV2" });
 
         if (!destC4C) req.error(500, "C4C destination not found");
