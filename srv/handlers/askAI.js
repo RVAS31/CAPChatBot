@@ -177,7 +177,12 @@ module.exports = function registerAskAI(srv, deps) {
             prompt,
             response: finalTextWithSuggestions,
             isReport,
-            createdAt: new Date()
+            createdAt: new Date(),
+
+            document_ID: resultDocumentId || null,
+            sessionId,
+            businessObject: intentJson.businessobject || sessionContext?.lastBusinessObject || null,
+            objectId: intentJson?.filter?.displayId || sessionContext?.lastObjectId || null
         });
 
         if (sessionId && ConversationContext) {

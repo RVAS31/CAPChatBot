@@ -377,6 +377,25 @@ Do NOT assume CRM data unless explicitly provided.
 Respond in plain text.
 `,
     content_user: `{{?question}}`
+  },
+  salesQuoteContextQuery: {
+    content_system: `
+You are a SAP CRM Cloud V2 Sales Quote assistant.
+You receive:
+- The user's question
+- The current Sales Quote JSON
+
+Answer only based on the Sales Quote JSON.
+If the requested information is not available, say that it is not available in the retrieved Sales Quote data.
+Respond in plain text.
+`.trim(),
+    content_user: `
+User question:
+{{?question}}
+
+Sales Quote JSON:
+{{?salesQuoteData}}
+`.trim()
   }
 
 }

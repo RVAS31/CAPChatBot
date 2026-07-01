@@ -61,26 +61,69 @@ sap.ui.define([
 
                 let that = this,
                     oViewModel = new JSONModel({
-                        busy: false,
-                        text: "",
+                        busy: false, text: "",
                         setUploadEnabled: true,
                         setSelectEnabled: false,
                     });
 
                 that.getView().setModel(oViewModel, "ChatBotViewModel");
 
+                const salesQuoteId = that._getSalesQuoteIdFromUrl();
+
+                const sessionId = that._getSessionIdForContext(salesQuoteId);
+
                 const oChatModel = new sap.ui.model.json.JSONModel({
                     messages: [],
                     currentPrompt: "",
                     pendingAttachment: null,
-                    sessionId: crypto.randomUUID()
+                    sessionId: sessionId,
+                    context: { objectType: salesQuoteId ? "salesQuotes" : null, objectId: salesQuoteId || null }
                 });
 
-                oChatModel.setSizeLimit(5000); // to increase limit
+                oChatModel.setSizeLimit(5000); // to increase limit 
 
                 that.getView().setModel(oChatModel, "chatBotModel");
-                that._updateChatBot();
 
+                that._updateChatBot();
+            },
+
+            /**
+             *  To get the session id for the context. If the sales quote id is given, it will be used to create a unique session id for that sales quote. Otherwise, a generic session id will be used.
+             *  The session id is stored in localStorage to persist across page reloads.
+             *  @returns {string} The session id for the current context.
+             *  @param {*} salesQuoteId 
+             */
+            _getSessionIdForContext: function (salesQuoteId) {
+
+                if (!salesQuoteId) {
+                    let sessionId = window.localStorage.getItem("chatbox.session.generic");
+
+                    if (!sessionId) {
+                        sessionId = crypto.randomUUID();
+                        window.localStorage.setItem("chatbox.session.generic", sessionId);
+                    }
+
+                    return sessionId;
+                }
+
+                const key = `chatbox.session.salesQuote.${salesQuoteId}`;
+                let sessionId = window.localStorage.getItem(key);
+
+                if (!sessionId) {
+                    sessionId = crypto.randomUUID();
+                    window.localStorage.setItem(key, sessionId);
+                }
+
+                return sessionId;
+            },
+
+            /**
+             * To get the sales quote id from the url
+             * @returns 
+             */
+            _getSalesQuoteIdFromUrl: function () {
+                const params = new URLSearchParams(window.location.search);
+                return params.get("salesQuoteId");
             },
 
             /**
@@ -94,7 +137,6 @@ sap.ui.define([
                 if (upLoadSet.getItems().length === 1) {
                     //To enable the set property setSelectEnable to true
                     that.getView().getModel("appViewModel").setProperty("/setSelectEnabled", true);
-                    //that.getView().getModel("appViewModel").setProperty("/setButtonGo", true);
                 }
 
                 that.closeFragmentUpload()
@@ -251,20 +293,21 @@ sap.ui.define([
                 that._getAiCollection();
             },
 
+
             /**
-             * To get the assigned roles and set the model up 
-             */
+            * To get the assigned roles and set the model up
+            */
             _getAiCollection: function () {
 
                 let that = this;
-                const oDataAIModel = that.getOwnerComponent().getModel("AIOdataModel");
-                const oInput = that.byId("messageInput");
+
+                const oDataAIModel =
+                    that.getOwnerComponent().getModel("AIOdataModel");
 
                 if (!oDataAIModel) {
                     console.error("OData contact model not found.");
                     return;
                 }
-
 
                 if (!that._oBusyDialog) {
                     that._oBusyDialog = new sap.m.BusyDialog({
@@ -275,16 +318,28 @@ sap.ui.define([
 
                 that._oBusyDialog.open();
 
+                const oChatModel =
+                    that.getView().getModel("chatBotModel");
+
+                const sessionId =
+                    oChatModel.getProperty("/sessionId");
+
                 ODataRequests.onFetchItems(oDataAIModel, "/AICollection")
+
                     .then((items) => {
+
+                        const filteredItems = (items || []).filter((item) => {
+                            return item.sessionId === sessionId;
+                        });
 
                         const messages = [];
 
-                        // Sort items by createdAt ascending
-                        items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                        filteredItems.sort((a, b) =>
+                            new Date(a.createdAt) - new Date(b.createdAt)
+                        );
 
-                        items.forEach(item => {
-                            // User prompt
+                        filteredItems.forEach(item => {
+
                             messages.push({
                                 sender: "user",
                                 message: item.prompt,
@@ -292,47 +347,51 @@ sap.ui.define([
                                 shouldNotReported: true
                             });
 
-                            // AI response
                             messages.push({
                                 sender: "bot",
                                 message: item.response,
                                 timestamp: item.createdAt,
-                                shouldNotReported: item.isReport ? false : true,
+                                shouldNotReported:
+                                    item.isReport ? false : true,
                                 id: item.ID
                             });
                         });
 
-                        console.log("here the messages", messages)
-                        const oChatModel = that.getView().getModel("chatBotModel");
+                        console.log("Messages for session:", sessionId, messages);
 
-                        // Only update messages
                         oChatModel.setProperty("/messages", messages);
-
-                        // Clear input
                         oChatModel.setProperty("/currentPrompt", "");
+
                     })
+
                     .catch((error) => {
 
-                        sap.m.MessageBox.error("Failed to contact AI: " + err.message);
+                        sap.m.MessageBox.error(
+                            "Failed to contact AI: " +
+                            (error.message || error)
+                        );
 
-                    }).finally(() => {
+                    })
 
-                        // Hide busy state when request is done
+                    .finally(() => {
+
                         that._oBusyDialog.close();
 
                     });
             },
 
             /**
-             * To ask AI 
+             * To send the prompt to the AI and get the response
+             * @returns {Promise<void>}
              */
             onAskAI: async function () {
 
                 let that = this;
                 const oDataAIModel = that.getOwnerComponent().getModel("AIOdataModel");
-                const oChatModel = this.getView().getModel("chatBotModel");
+                const oChatModel = that.getView().getModel("chatBotModel");
 
-                let sPrompt = (oChatModel.getProperty("/currentPrompt") || "").trim();
+                const sPrompt = (oChatModel.getProperty("/currentPrompt") || "").trim();
+
                 if (!sPrompt) {
                     sap.m.MessageToast.show("Please type a message first.");
                     return;
@@ -340,26 +399,83 @@ sap.ui.define([
 
                 const oPending = oChatModel.getProperty("/pendingAttachment");
                 const documentId = oPending?.documentId || null;
-                const sessionId = oChatModel.getProperty("/sessionId");
 
-                console.log(sessionId, "sessionId in onAskAI")
+                const sessionId = that._getSessionId
+                    ? that._getSessionId()
+                    : oChatModel.getProperty("/sessionId");
+
+                const oContext = oChatModel.getProperty("/context") || {};
+                const salesQuoteId =
+                    oContext.objectType === "salesQuotes"
+                        ? oContext.objectId
+                        : null;
 
                 try {
-                    // Call CAP action askAI (extend your CDS to accept documentId)
-                    const sResponse = await ODataRequests.onCreateItemWithAction(oDataAIModel, "askAI", {
-                        prompt: sPrompt,
-                        documentId: documentId, // only if you add it to the action signature
-                        sessionId: sessionId
-                    });
+                    let sResponse;
 
-                    // clear input + attachment after send
+                    if (salesQuoteId) {
+                        // Context-specific Sales Quote agent
+                        sResponse = await ODataRequests.onCreateItemWithAction(
+                            oDataAIModel,
+                            "askSalesQuoteAgent",
+                            {
+                                prompt: sPrompt,
+                                salesQuoteDisplayId: salesQuoteId,
+                                sessionId: sessionId
+                            }
+                        );
+                    } else {
+                        // Generic AI agent
+                        sResponse = await ODataRequests.onCreateItemWithAction(
+                            oDataAIModel,
+                            "askAI",
+                            {
+                                prompt: sPrompt,
+                                documentId: documentId,
+                                sessionId: sessionId
+                            }
+                        );
+                    }
+
+                    console.log("AI response:", sResponse);
+
+                    // Clear input + attachment after send
                     oChatModel.setProperty("/currentPrompt", "");
                     oChatModel.setProperty("/pendingAttachment", null);
+
                     that._updateChatBot();
 
                 } catch (err) {
-                    sap.m.MessageBox.error("Failed to call AI: " + err.message);
+                    sap.m.MessageBox.error("Failed to call AI: " + (err.message || err));
                 }
+            },
+
+            /**
+             * Returns the current chat sessionId.
+             * Creates and persists one if it does not exist yet.
+             *
+             * The sessionId is stored:
+             * - in browser localStorage (survives refresh/browser restart)
+             * - in chatBotModel
+             *
+             * @returns {string}
+             */
+            _getSessionId: function () {
+
+                let sessionId = window.localStorage.getItem("chatbox.sessionId");
+
+                if (!sessionId) {
+                    sessionId = crypto.randomUUID();
+                    window.localStorage.setItem("chatbox.sessionId", sessionId);
+                }
+
+                const oChatModel = this.getView().getModel("chatBotModel");
+
+                if (oChatModel) {
+                    oChatModel.setProperty("/sessionId", sessionId);
+                }
+
+                return sessionId;
             },
 
             /**

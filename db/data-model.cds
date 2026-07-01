@@ -3,11 +3,16 @@ namespace aimodel;
 using {cuid} from '@sap/cds/common';
 
 entity Prompts : cuid {
-  prompt    : String;
-  response  : String;
-  isReport  : Boolean;
-  createdAt : Timestamp;
-  document : Association to Documents;
+  prompt         : String;
+  response       : String;
+  isReport       : Boolean;
+  createdAt      : Timestamp;
+
+  document       : Association to Documents;
+
+  sessionId      : String;
+  businessObject : String;
+  objectId       : String;
 }
 
 entity Documents : cuid {
@@ -21,7 +26,7 @@ entity Documents : cuid {
 
 entity DocumentAnalysis : cuid {
   document  : Association to Documents;
-  analysis  : LargeString; // JSON string returned by AI
+  analysis  : LargeString;
   createdAt : Timestamp;
   model     : String;
 }
