@@ -47,6 +47,7 @@ module.exports = function registerAskSalesQuoteAgent(srv, deps) {
         });
 
         const skillResult = agentResult.result;
+        console.log("Sales Quote Agent sources:", skillResult.sources || []);
         const resultActivity = agentResult.activity;
 
         const finalAnswer =
@@ -75,15 +76,28 @@ module.exports = function registerAskSalesQuoteAgent(srv, deps) {
         if (sessionId && ConversationContext) {
             await UPSERT.into(ConversationContext).entries({
                 ID: sessionContext?.ID || uuidv4(),
+
                 sessionId,
+
                 lastPrompt: prompt,
                 lastResponse: cleanedText,
-                lastDocument_ID: resultDocumentId || sessionContext?.lastDocument_ID || null,
+
+                lastDocument_ID:
+                    resultDocumentId || sessionContext?.lastDocument_ID || null,
+
                 lastActivity: resultActivity,
+
                 lastBusinessObject: "salesQuotes",
+
                 lastObjectId: salesQuoteDisplayId,
+
                 createdAt: sessionContext?.createdAt || new Date(),
-                updatedAt: new Date()
+                updatedAt: new Date(),
+
+                lastSuggestedSkills: JSON.stringify({
+                    activity: resultActivity,
+                    sources: skillResult.sources || []
+                })
             });
         }
 

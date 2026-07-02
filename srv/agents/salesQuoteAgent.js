@@ -46,6 +46,7 @@ async function planSalesGoal({
         const parsed = parseJsonFromModel(response.getContent());
 
         const allowedGoals = [
+            "general_chat",
             "summarize_sales_quote",
             "answer_sales_quote_question",
             "analyze_attachment",
@@ -130,12 +131,21 @@ async function runSalesQuoteAgent({
         prompt,
         salesQuoteDisplayId,
         sessionContext,
-        plan
+        plan,
+        memory: {
+            lastPrompt: sessionContext?.lastPrompt || null,
+            lastResponse: sessionContext?.lastResponse || null,
+            lastActivity: sessionContext?.lastActivity || null,
+            lastBusinessObject: sessionContext?.lastBusinessObject || null,
+            lastObjectId: sessionContext?.lastObjectId || null,
+            lastDocumentId: sessionContext?.lastDocument_ID || null,
+            lastSuggestedSkills: sessionContext?.lastSuggestedSkills || null
+        }
     });
 
     return {
         activity: graphResult.activity,
-        result: graphResult.toolResult
+        result: graphResult.normalizedResult
     };
 }
 

@@ -5,12 +5,14 @@ const crmAttachmentAnalysis = require("../skills/crmAttachmentAnalysis");
 const salesQuoteContextQuery = require("../skills/salesQuoteContextQuery");
 
 function createSalesQuoteTools(baseCtx) {
+
     const salesQuoteContextQueryTool = tool(
-        async ({ prompt, salesQuoteDisplayId }) => {
+        async ({ prompt, salesQuoteDisplayId, memory }) => {
             const result = await salesQuoteContextQuery({
                 ...baseCtx,
                 prompt,
-                salesQuoteDisplayId
+                salesQuoteDisplayId,
+                memory
             });
 
             return typeof result === "string"
@@ -23,13 +25,14 @@ function createSalesQuoteTools(baseCtx) {
                 "Use this tool to answer questions about a specific Sales Quote using CRM Sales Cloud V2 data.",
             schema: z.object({
                 prompt: z.string(),
-                salesQuoteDisplayId: z.string()
+                salesQuoteDisplayId: z.string(),
+                memory: z.any().optional()
             })
         }
     );
 
     const crmAttachmentAnalysisTool = tool(
-        async ({ prompt, salesQuoteDisplayId }) => {
+        async ({ prompt, salesQuoteDisplayId, memory }) => {
             const intentJson = {
                 hasDocument: false,
                 activity: "crm_attachment_analysis",
@@ -50,7 +53,8 @@ function createSalesQuoteTools(baseCtx) {
                 prompt,
                 intentJson,
                 docText: "",
-                documentId: null
+                documentId: memory?.lastDocumentId || null,
+                memory
             });
 
             return typeof result === "string"
@@ -63,7 +67,8 @@ function createSalesQuoteTools(baseCtx) {
                 "Use this tool to retrieve and analyze the latest attachment of a specific Sales Quote.",
             schema: z.object({
                 prompt: z.string(),
-                salesQuoteDisplayId: z.string()
+                salesQuoteDisplayId: z.string(),
+                memory: z.any().optional()
             })
         }
     );
