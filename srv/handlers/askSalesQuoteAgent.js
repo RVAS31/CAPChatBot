@@ -1,76 +1,5 @@
 const { extractReportMarker } = require("../utils/reportMarker");
-const crmAttachmentAnalysis = require("../skills/crmAttachmentAnalysis");
-const salesQuoteContextQuery = require("../skills/salesQuoteContextQuery");
-
-function isAttachmentRequest(prompt) {
-    const text = (prompt || "").toLowerCase();
-
-    return (
-        text.includes("attachment") ||
-        text.includes("document") ||
-        text.includes("file") ||
-        text.includes("analyze") ||
-        text.includes("summarize") ||
-        text.includes("extract") ||
-        text.includes("risk") ||
-        text.includes("commercial risk") ||
-        text.includes("email") ||
-        text.includes("reply") ||
-        text.includes("next best action")
-    );
-}
-
-async function decideSalesQuoteRoute(ctx) {
-    const {
-        OrchestrationClient,
-        destAI,
-        prompts,
-        prompt,
-        salesQuoteDisplayId,
-        sessionContext
-    } = ctx;
-
-    const routerClient = new OrchestrationClient({
-        destination: destAI,
-        llm: { model_name: "gpt-4o" },
-        templating: {
-            template: [
-                {
-                    role: "system",
-                    content: prompts.salesQuoteAgentRouter.content_system
-                },
-                {
-                    role: "user",
-                    content: prompts.salesQuoteAgentRouter.content_user
-                }
-            ]
-        }
-    });
-
-    const response = await routerClient.chatCompletion({
-        inputParams: {
-            question: prompt,
-            salesQuoteDisplayId,
-            conversationContext: JSON.stringify(sessionContext || {})
-        }
-    });
-
-    try {
-        const parsed = JSON.parse(response.getContent());
-
-        if (
-            parsed.route === "sales_quote_context_query" ||
-            parsed.route === "crm_attachment_analysis"
-        ) {
-            return parsed.route;
-        }
-
-        return "sales_quote_context_query";
-    } catch (e) {
-        console.error("Could not parse Sales Quote route:", response.getContent());
-        return "sales_quote_context_query";
-    }
-}
+const { runSalesQuoteAgent } = require("../agents/salesQuoteAgent");
 
 module.exports = function registerAskSalesQuoteAgent(srv, deps) {
     const {
@@ -102,67 +31,23 @@ module.exports = function registerAskSalesQuoteAgent(srv, deps) {
             ? await SELECT.one.from(ConversationContext).where({ sessionId })
             : null;
 
-        let skillResult;
-        let resultActivity;
-
-        const selectedRoute = await decideSalesQuoteRoute({
+        const agentResult = await runSalesQuoteAgent({
             OrchestrationClient,
             destAI,
+            destC4C,
             prompts,
             prompt,
             salesQuoteDisplayId,
-            sessionContext
+            sessionContext,
+            Documents,
+            DocumentAnalysis,
+            JSZip,
+            uuidv4,
+            _C4CApi
         });
 
-        console.log("Sales Quote Agent route:", selectedRoute);
-
-        if (selectedRoute === "crm_attachment_analysis") {
-            resultActivity = "crm_attachment_analysis";
-
-            const intentJson = {
-                hasDocument: false,
-                activity: "crm_attachment_analysis",
-                confidence: 1,
-                businessobject: "salesQuotes",
-                service: "sales-quote-service",
-                operation: "read",
-                task: prompt,
-                filter: {
-                    displayId: salesQuoteDisplayId
-                },
-                select: [],
-                payload: {}
-            };
-
-            skillResult = await crmAttachmentAnalysis({
-                OrchestrationClient,
-                destAI,
-                destC4C,
-                prompts,
-                prompt,
-                intentJson,
-                docText: "",
-                documentId: null,
-                sessionContext,
-                Documents,
-                DocumentAnalysis,
-                JSZip,
-                uuidv4,
-                _C4CApi
-            });
-
-        } else {
-            resultActivity = "sales_quote_context_query";
-
-            skillResult = await salesQuoteContextQuery({
-                OrchestrationClient,
-                destAI,
-                destC4C,
-                prompts,
-                prompt,
-                salesQuoteDisplayId
-            });
-        }
+        const skillResult = agentResult.result;
+        const resultActivity = agentResult.activity;
 
         const finalAnswer =
             typeof skillResult === "string"
@@ -181,7 +66,6 @@ module.exports = function registerAskSalesQuoteAgent(srv, deps) {
             response: cleanedText,
             isReport,
             createdAt: new Date(),
-
             document_ID: resultDocumentId || null,
             sessionId,
             businessObject: "salesQuotes",
