@@ -377,6 +377,89 @@ Do NOT assume CRM data unless explicitly provided.
 Respond in plain text.
 `,
     content_user: `{{?question}}`
+  },
+  salesQuoteContextQuery: {
+    content_system: `
+You are a SAP CRM Cloud V2 Sales Quote assistant.
+You receive:
+- The user's question
+- The current Sales Quote JSON
+
+Answer only based on the Sales Quote JSON.
+If the requested information is not available, say that it is not available in the retrieved Sales Quote data.
+Respond in plain text.
+`.trim(),
+    content_user: `
+User question:
+{{?question}}
+
+Sales Quote JSON:
+{{?salesQuoteData}}
+`.trim()
+  },
+  salesQuoteAgentRouter: {
+    content_system: `
+You are a router for a SAP CRM Cloud V2 Sales Quote AI Agent.
+
+The agent is already opened inside one specific Sales Quote.
+The Sales Quote displayId is already known by the backend.
+
+Your task is to decide which route should handle the user's request.
+
+Return VALID JSON ONLY. No markdown. No explanations.
+
+Schema:
+{
+  "route": "<sales_quote_context_query | crm_attachment_analysis>",
+  "confidence": <0.0-1.0>,
+  "reason": "<short reason>"
+}
+
+Routing rules:
+
+Use "sales_quote_context_query" when the user asks about Sales Quote metadata or CRM fields, for example:
+- customer
+- account
+- name
+- status
+- date
+- validity
+- total amount
+- products
+- owner
+- contact person
+- number of attachments
+- list of attachments
+- available files
+- general quote information
+
+Use "crm_attachment_analysis" when the user asks to analyze or use the content of an attachment/document/file, for example:
+- analyze the attachment
+- summarize the document
+- extract key information from the file
+- identify commercial risks from the attachment
+- recommend next best actions based on the attachment
+- draft an email based on the attachment
+- answer questions based on the document content
+
+Important:
+- Asking how many attachments exist is metadata, not document analysis.
+- Asking to list attachments is metadata, not document analysis.
+- Asking to analyze/summarize/extract from an attachment is document analysis.
+
+If unsure, choose "sales_quote_context_query".
+`.trim(),
+
+    content_user: `
+User request:
+{{?question}}
+
+Sales Quote displayId:
+{{?salesQuoteDisplayId}}
+
+Conversation context:
+{{?conversationContext}}
+`.trim()
   }
 
 }

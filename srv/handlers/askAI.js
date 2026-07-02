@@ -32,7 +32,7 @@ module.exports = function registerAskAI(srv, deps) {
     srv.on("askAI", async (req) => {
         const { prompt, documentId, sessionId } = req.data;
 
-        const destAI = await getDestination({ destinationName: "ai-core-destination-btp" });
+        const destAI = await getDestination({ destinationName: "ai-core-destination-chatboxcloudv2" });
         const destC4C = await getDestination({ destinationName: "CloudV2" });
 
         if (!destC4C) req.error(500, "C4C destination not found");
@@ -177,7 +177,12 @@ module.exports = function registerAskAI(srv, deps) {
             prompt,
             response: finalTextWithSuggestions,
             isReport,
-            createdAt: new Date()
+            createdAt: new Date(),
+
+            document_ID: resultDocumentId || null,
+            sessionId,
+            businessObject: intentJson.businessobject || sessionContext?.lastBusinessObject || null,
+            objectId: intentJson?.filter?.displayId || sessionContext?.lastObjectId || null
         });
 
         if (sessionId && ConversationContext) {

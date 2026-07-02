@@ -12,6 +12,7 @@ const { _C4CApi, checkBONames } = require("./utils/service-functions");
 const registerAskAI = require("./handlers/askAI");
 const registerUploadTextDocument = require("./handlers/uploadTextDocument");
 const registerGetResponseById = require("./handlers/getResponseById");
+const registerAskSalesQuoteAgent = require("./handlers/askSalesQuoteAgent");
 
 module.exports = cds.service.impl(function () {
 
@@ -28,6 +29,19 @@ module.exports = cds.service.impl(function () {
         prompts,
         _C4CApi,
         checkBONames,
+        JSZip,
+        uuidv4
+    });
+
+    registerAskSalesQuoteAgent(this, {
+        AICollection,
+        Documents,
+        DocumentAnalysis,
+        ConversationContext,
+        getDestination,
+        OrchestrationClient,
+        prompts,
+        _C4CApi,
         JSZip,
         uuidv4
     });

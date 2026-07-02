@@ -29,4 +29,8 @@ service AIService {
     // Use action (not function) for your use case
     action c4cConnection()                           returns String;
 
+    action askSalesQuoteAgent(prompt: String,
+                              salesQuoteDisplayId: String,
+                              sessionId: String)     returns String;
+
 }

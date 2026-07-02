@@ -1,4 +1,4 @@
-_schema-version: '3.1'
+_schema-version: "3.1"
 ID: chatboxcloudv2
 version: 1.0.0
 description: "A simple CAP project."
@@ -34,7 +34,7 @@ modules:
       - name: chatboxcloudv2-db
       - name: chatboxcloudv2-uaa
       - name: chatboxcloudv2-destination
-      - name: ai-core-instance   # <-- bind AI Core instance
+      - name: ai-core-instance # <-- bind AI Core instance
 
   # ---------------- DATABASE DEPLOYER MODULE ------------------
   - name: chatboxcloudv2-db-deployer
@@ -131,7 +131,7 @@ resources:
                 HTML5.ForwardAuthToken: true
                 URL: ~{srv/srv-url}
 
-              - Name: ai-core-destination-btp
+              - Name: ai-core-destination-chatboxcloudv2
                 Type: HTTP
                 ProxyType: Internet
                 Authentication: OAuth2ClientCredentials
