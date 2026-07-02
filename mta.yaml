@@ -1,9 +1,11 @@
 _schema-version: "3.1"
 ID: chatboxcloudv2
 version: 1.0.0
-description: "A simple CAP project."
+description: "CAP project for Chatbox Cloud V2"
+
 parameters:
   enable-parallel-deployments: true
+
 build-parameters:
   before-all:
     - builder: custom
@@ -27,14 +29,14 @@ modules:
       memory: 512M
       disk-quota: 1024M
     provides:
-      - name: srv # required by consumers of CAP services (e.g. approuter)
+      - name: srv-api
         properties:
           srv-url: ${default-url}
     requires:
       - name: chatboxcloudv2-db
       - name: chatboxcloudv2-uaa
       - name: chatboxcloudv2-destination
-      - name: ai-core-instance # <-- bind AI Core instance
+      - name: ai-core-instance
 
   # ---------------- DATABASE DEPLOYER MODULE ------------------
   - name: chatboxcloudv2-db-deployer
@@ -51,7 +53,6 @@ modules:
       memory: 256M
       disk-quota: 1024M
     requires:
-      - name: chatboxcloudv2-uaa
       - name: chatboxcloudv2-db
 
   # ------------------ APP ROUTER MODULE -----------------------
@@ -70,7 +71,7 @@ modules:
       keep-existing-routes: true
     requires:
       - name: chatboxcloudv2-uaa
-      - name: srv
+      - name: srv-api
         group: destinations
         properties:
           name: srv
@@ -93,7 +94,7 @@ resources:
       service-plan: application
       path: ./xs-security.json
       config:
-        xsappname: chatboxcloudv2-AccentureGlobalSolutionsLtdAccentureSbgAsg-${space}
+        xsappname: chatboxcloudv2-${space}
         tenant-mode: dedicated
 
   # ------------------- HDI CONTAINER SERVICE ------------------
@@ -123,32 +124,20 @@ resources:
                 URL: https://ui5.sap.com
 
               - Name: chatboxcloudv2-app-api
-                Description: basic project CAP service
+                Description: CAP service destination
                 Type: HTTP
                 ProxyType: Internet
                 Authentication: NoAuthentication
                 HTML5.DynamicDestination: true
                 HTML5.ForwardAuthToken: true
-                URL: ~{srv/srv-url}
-
-              - Name: ai-core-destination-chatboxcloudv2
-                Type: HTTP
-                ProxyType: Internet
-                Authentication: OAuth2ClientCredentials
-                URL: https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com
-                TokenServiceURL: https://accenture-sbg-asg.authentication.eu10.hana.ondemand.com/oauth/token
-                tokenServiceURLType: Dedicated
-                clientId: ~{ai-core-instance/clientid}
-                clientSecret: ~{ai-core-instance/clientsecret}
+                URL: ~{srv-api/srv-url}
 
             existing_destinations_policy: update
     requires:
-      - name: srv
-      - name: ai-core-instance
+      - name: srv-api
 
-  # ------------------ AI CORE SERVICE -------------------------
+  # ------------------ EXISTING AI CORE SERVICE ----------------
   - name: ai-core-instance
-    type: org.cloudfoundry.managed-service
+    type: org.cloudfoundry.existing-service
     parameters:
-      service: aicore
-      service-plan: extended
+      service-name: AICore
