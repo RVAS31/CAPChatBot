@@ -400,9 +400,7 @@ sap.ui.define([
                 const oPending = oChatModel.getProperty("/pendingAttachment");
                 const documentId = oPending?.documentId || null;
 
-                const sessionId = that._getSessionId
-                    ? that._getSessionId()
-                    : oChatModel.getProperty("/sessionId");
+                const sessionId = oChatModel.getProperty("/sessionId");
 
                 const oContext = oChatModel.getProperty("/context") || {};
                 const salesQuoteId =
@@ -448,34 +446,6 @@ sap.ui.define([
                 } catch (err) {
                     sap.m.MessageBox.error("Failed to call AI: " + (err.message || err));
                 }
-            },
-
-            /**
-             * Returns the current chat sessionId.
-             * Creates and persists one if it does not exist yet.
-             *
-             * The sessionId is stored:
-             * - in browser localStorage (survives refresh/browser restart)
-             * - in chatBotModel
-             *
-             * @returns {string}
-             */
-            _getSessionId: function () {
-
-                let sessionId = window.localStorage.getItem("chatbox.sessionId");
-
-                if (!sessionId) {
-                    sessionId = crypto.randomUUID();
-                    window.localStorage.setItem("chatbox.sessionId", sessionId);
-                }
-
-                const oChatModel = this.getView().getModel("chatBotModel");
-
-                if (oChatModel) {
-                    oChatModel.setProperty("/sessionId", sessionId);
-                }
-
-                return sessionId;
             },
 
             /**
