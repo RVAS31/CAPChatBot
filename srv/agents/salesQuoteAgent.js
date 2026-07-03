@@ -9,6 +9,56 @@ function parseJsonFromModel(content) {
     return JSON.parse(cleaned);
 }
 
+async function validateSalesQuoteScope({
+    OrchestrationClient,
+    destAI,
+    prompts,
+    prompt,
+    salesQuoteDisplayId,
+    sessionContext
+}) {
+    const scopeClient = new OrchestrationClient({
+        destination: destAI,
+        llm: { model_name: "gpt-4o" },
+        templating: {
+            template: [
+                {
+                    role: "system",
+                    content: prompts.salesQuoteScopeValidator.content_system
+                },
+                {
+                    role: "user",
+                    content: prompts.salesQuoteScopeValidator.content_user
+                }
+            ]
+        }
+    });
+
+    const response = await scopeClient.chatCompletion({
+        inputParams: {
+            question: prompt,
+            salesQuoteDisplayId,
+            conversationContext: JSON.stringify(sessionContext || {})
+        }
+    });
+
+    try {
+        const parsed = parseJsonFromModel(response.getContent());
+
+        return {
+            inScope: !!parsed.inScope,
+            reason: parsed.reason || ""
+        };
+    } catch (e) {
+        console.error("Could not parse Sales Quote scope:", response.getContent());
+
+        return {
+            inScope: true,
+            reason: "Fallback: continue with Sales Quote planner"
+        };
+    }
+}
+
 async function planSalesGoal({
     OrchestrationClient,
     destAI,
@@ -103,7 +153,7 @@ async function runSalesQuoteAgent({
     _C4CApi
 }) {
 
-    const plan = await planSalesGoal({
+    const scope = await validateSalesQuoteScope({
         OrchestrationClient,
         destAI,
         prompts,
@@ -112,7 +162,32 @@ async function runSalesQuoteAgent({
         sessionContext
     });
 
+    console.log("Sales Quote Agent scope:", scope);
+
+    let plan;
+
+    if (!scope.inScope) {
+        plan = {
+            goal: "general_chat",
+            confidence: 1,
+            businessObject: "salesQuotes",
+            requiresAttachment: false,
+            requiresSalesQuoteData: false,
+            reason: scope.reason
+        };
+    } else {
+        plan = await planSalesGoal({
+            OrchestrationClient,
+            destAI,
+            prompts,
+            prompt,
+            salesQuoteDisplayId,
+            sessionContext
+        });
+    }
+
     console.log("Sales Quote Agent plan:", plan);
+
 
     const graph = createSalesQuoteGraph({
         OrchestrationClient,

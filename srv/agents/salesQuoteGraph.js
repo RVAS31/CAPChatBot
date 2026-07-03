@@ -84,18 +84,19 @@ function createSalesQuoteGraph(baseCtx) {
         };
     });
 
+    graph.addNode("generalChat", async (state) => {
+        return {
+            ...state,
+            rawToolResult: {
+                text: "Hello! I am ready to help you with this Sales Quote.",
+                documentId: null,
+                sources: ["Conversation"]
+            },
+            activity: "general_chat"
+        };
+    });
+
     graph.addNode("executeTool", async (state) => {
-        if (state.selectedToolName === "general_chat") {
-            return {
-                ...state,
-                rawToolResult: {
-                    text: "Hello! I am ready to help you with this Sales Quote.",
-                    documentId: null,
-                    sources: ["Conversation"]
-                },
-                activity: "general_chat"
-            };
-        }
 
         const selectedTool = tools.find(
             tool => tool.name === state.selectedToolName
@@ -137,7 +138,21 @@ function createSalesQuoteGraph(baseCtx) {
 
     graph.addEdge(START, "validateInput");
     graph.addEdge("validateInput", "selectTool");
-    graph.addEdge("selectTool", "executeTool");
+    graph.addConditionalEdges(
+        "selectTool",
+        (state) => {
+            if (state.selectedToolName === "general_chat") {
+                return "generalChat";
+            }
+
+            return "executeTool";
+        },
+        {
+            generalChat: "generalChat",
+            executeTool: "executeTool"
+        }
+    );
+    graph.addEdge("generalChat", "normalizeResult");
     graph.addEdge("executeTool", "normalizeResult");
     graph.addEdge("normalizeResult", END);
 
