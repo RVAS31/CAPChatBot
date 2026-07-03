@@ -149,8 +149,7 @@ async function runSalesQuoteAgent({
     Documents,
     DocumentAnalysis,
     JSZip,
-    uuidv4,
-    _C4CApi
+    uuidv4
 }) {
 
     const scope = await validateSalesQuoteScope({
@@ -198,8 +197,7 @@ async function runSalesQuoteAgent({
         Documents,
         DocumentAnalysis,
         JSZip,
-        uuidv4,
-        _C4CApi
+        uuidv4
     });
 
     const graphResult = await graph.invoke({

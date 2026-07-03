@@ -381,14 +381,12 @@ sap.ui.define([
             },
 
             /**
-             * To send the prompt to the AI and get the response
+             * Sends the prompt to the Sales Quote AI Agent.
              * @returns {Promise<void>}
              */
             onAskAI: async function () {
-
-                let that = this;
-                const oDataAIModel = that.getOwnerComponent().getModel("AIOdataModel");
-                const oChatModel = that.getView().getModel("chatBotModel");
+                const oDataAIModel = this.getOwnerComponent().getModel("AIOdataModel");
+                const oChatModel = this.getView().getModel("chatBotModel");
 
                 const sPrompt = (oChatModel.getProperty("/currentPrompt") || "").trim();
 
@@ -397,59 +395,42 @@ sap.ui.define([
                     return;
                 }
 
-                const oPending = oChatModel.getProperty("/pendingAttachment");
-                const documentId = oPending?.documentId || null;
-
-                const sessionId = oChatModel.getProperty("/sessionId");
+                const sSessionId = oChatModel.getProperty("/sessionId");
 
                 const oContext = oChatModel.getProperty("/context") || {};
-                const salesQuoteId =
+                const sSalesQuoteId =
                     oContext.objectType === "salesQuotes"
                         ? oContext.objectId
                         : null;
 
+                if (!sSalesQuoteId) {
+                    sap.m.MessageBox.error("No Sales Quote context found.");
+                    return;
+                }
+
                 try {
-                    let sResponse;
+                    await ODataRequests.onCreateItemWithAction(
+                        oDataAIModel,
+                        "askSalesQuoteAgent",
+                        {
+                            prompt: sPrompt,
+                            salesQuoteDisplayId: sSalesQuoteId,
+                            sessionId: sSessionId
+                        }
+                    );
 
-                    if (salesQuoteId) {
-                        // Context-specific Sales Quote agent
-                        sResponse = await ODataRequests.onCreateItemWithAction(
-                            oDataAIModel,
-                            "askSalesQuoteAgent",
-                            {
-                                prompt: sPrompt,
-                                salesQuoteDisplayId: salesQuoteId,
-                                sessionId: sessionId
-                            }
-                        );
-                    } else {
-                        // Generic AI agent
-                        sResponse = await ODataRequests.onCreateItemWithAction(
-                            oDataAIModel,
-                            "askAI",
-                            {
-                                prompt: sPrompt,
-                                documentId: documentId,
-                                sessionId: sessionId
-                            }
-                        );
-                    }
-
-                    console.log("AI response:", sResponse);
-
-                    // Clear input + attachment after send
                     oChatModel.setProperty("/currentPrompt", "");
                     oChatModel.setProperty("/pendingAttachment", null);
 
-                    that._updateChatBot();
+                    this._updateChatBot();
 
                 } catch (err) {
-                    sap.m.MessageBox.error("Failed to call AI: " + (err.message || err));
+                    sap.m.MessageBox.error("Failed to call Sales Quote Agent: " + (err.message || err));
                 }
             },
 
             /**
-             * To change lively
+             * To change lively the text in the input field and enable/disable the send button
              * @param {*} oEvent 
              */
             onLiveChange: function (oEvent) {

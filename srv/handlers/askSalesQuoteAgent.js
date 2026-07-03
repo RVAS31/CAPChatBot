@@ -12,7 +12,6 @@ module.exports = function registerAskSalesQuoteAgent(srv, deps) {
         prompts,
         JSZip,
         uuidv4,
-        _C4CApi
     } = deps;
 
     srv.on("askSalesQuoteAgent", async (req) => {
@@ -42,8 +41,7 @@ module.exports = function registerAskSalesQuoteAgent(srv, deps) {
             Documents,
             DocumentAnalysis,
             JSZip,
-            uuidv4,
-            _C4CApi
+            uuidv4
         });
 
         const skillResult = agentResult.result;
