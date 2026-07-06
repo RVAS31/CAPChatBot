@@ -19,12 +19,14 @@ function mapGoalToTool(goal) {
     }
 }
 
-function normalizeToolResult(toolResult) {
+function normalizeToolResult(toolResult, selectedToolName) {
     if (typeof toolResult === "string") {
         return {
             text: toolResult,
             documentId: null,
-            sources: ["Conversation"]
+            sources: selectedToolName === "general_chat"
+                ? ["Conversation"]
+                : ["CRM Sales Quote"]
         };
     }
 
@@ -49,6 +51,7 @@ function createSalesQuoteGraph(baseCtx) {
             salesQuoteDisplayId: null,
             sessionContext: null,
             memory: null,
+            loadedContext: null,
             plan: null,
             selectedToolName: null,
             rawToolResult: null,
@@ -71,6 +74,24 @@ function createSalesQuoteGraph(baseCtx) {
         }
 
         return state;
+    });
+
+    graph.addNode("loadContext", async (state) => {
+        const loadedContext = {
+            salesQuoteDisplayId: state.salesQuoteDisplayId,
+            hasMemoryDocument: !!state.memory?.lastDocumentId,
+            lastDocumentId: state.memory?.lastDocumentId || null,
+            lastActivity: state.memory?.lastActivity || null,
+            lastObjectId: state.memory?.lastObjectId || null,
+            sources: []
+        };
+
+        console.log("Sales Quote Graph loaded context:", loadedContext);
+
+        return {
+            ...state,
+            loadedContext
+        };
     });
 
     graph.addNode("selectTool", async (state) => {
@@ -128,7 +149,10 @@ function createSalesQuoteGraph(baseCtx) {
     });
 
     graph.addNode("normalizeResult", async (state) => {
-        const normalizedResult = normalizeToolResult(state.rawToolResult);
+        const normalizedResult = normalizeToolResult(
+            state.rawToolResult,
+            state.selectedToolName
+        );
 
         return {
             ...state,
@@ -137,7 +161,8 @@ function createSalesQuoteGraph(baseCtx) {
     });
 
     graph.addEdge(START, "validateInput");
-    graph.addEdge("validateInput", "selectTool");
+    graph.addEdge("validateInput", "loadContext");
+    graph.addEdge("loadContext", "selectTool");
     graph.addConditionalEdges(
         "selectTool",
         (state) => {
