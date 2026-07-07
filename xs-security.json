@@ -1,19 +1,10 @@
 {
   "xsappname": "chatboxcloudv2-AccentureGlobalSolutionsLtdAccentureSbgAsg-DEV",
   "tenant-mode": "dedicated",
-  "attributes": [],
   "scopes": [
     {
       "name": "uaa.user",
       "description": "UAA"
-    },
-    {
-      "name": "$XSAPPNAME.Viewer",
-      "description": "Viewer"
-    },
-    {
-      "name": "$XSAPPNAME.Admin",
-      "description": "Administrator"
     }
   ],
   "role-templates": [
@@ -23,42 +14,15 @@
       "scope-references": [
         "uaa.user"
       ]
-    },
-    {
-      "name": "Viewer",
-      "description": "Viewer",
-      "scope-references": [
-        "$XSAPPNAME.Viewer"
-      ]
-    },
-    {
-      "name": "Admin",
-      "description": "Administrator",
-      "scope-references": [
-        "$XSAPPNAME.Admin"
-      ]
-    }
-  ],
-  "role-collections": [
-    {
-      "name": "chatboxcloudv2_Viewer",
-      "description": "Viewing access",
-      "role-template-references": [
-        "$XSAPPNAME.Viewer"
-      ]
-    },
-    {
-      "name": "chatboxcloudv2_Administrator",
-      "description": "Administrative access",
-      "role-template-references": [
-        "$XSAPPNAME.Admin"
-      ]
     }
   ],
   "oauth2-configuration": {
     "redirect-uris": [
       "https://*.hana.ondemand.com/**",
       "https://*.eu10-004.hana.ondemand.com/**",
+      "https://*.cfapps.eu10-004.hana.ondemand.com/**",
+      "https://*.crm.cloud.sap/**",
+      "https://my1000269.de1.test.crm.cloud.sap/**",
       "https://eu10.applicationstudio.cloud.sap/**",
       "http://localhost:*/**"
     ]

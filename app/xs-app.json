@@ -1,33 +1,35 @@
 {
-    "welcomeFile": "webapp/",
-    "authenticationMethod": "route",
-    "routes": [
-        {
-            "source": "^/$",
-            "target": "index.html",
-            "localDir": "webapp"
-        },
-        {
-            "source": "^/webapp/(.*)$",
-            "target": "$1",
-            "authenticationType": "xsuaa",
-            "localDir": "webapp/"
-        },
-        {
-            "source": "^/api/(.*)$",
-            "destination": "chatboxcloudv2-app-api",
-            "csrfProtection": false,
-            "authenticationType": "none"
-        },
-        {
-            "source": "^/ui5/(.*)$",
-            "destination": "ui5",
-            "csrfProtection": false
-        },
-        {
-            "source": "^/(.*)",
-            "authenticationType": "xsuaa",
-            "destination": "srv"
-        }
-    ]
+  "welcomeFile": "webapp/",
+  "authenticationMethod": "route",
+  "routes": [
+    {
+      "source": "^/$",
+      "target": "index.html",
+      "authenticationType": "xsuaa",
+      "localDir": "webapp"
+    },
+    {
+      "source": "^/webapp/(.*)$",
+      "target": "$1",
+      "authenticationType": "xsuaa",
+      "localDir": "webapp/"
+    },
+    {
+      "source": "^/api/(.*)$",
+      "destination": "chatboxcloudv2-app-api",
+      "csrfProtection": false,
+      "authenticationType": "xsuaa"
+    },
+    {
+      "source": "^/ui5/(.*)$",
+      "destination": "ui5",
+      "csrfProtection": false,
+      "authenticationType": "none"
+    },
+    {
+      "source": "^/(.*)",
+      "authenticationType": "xsuaa",
+      "destination": "srv"
+    }
+  ]
 }
