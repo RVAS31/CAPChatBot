@@ -1,5 +1,6 @@
 const { StateGraph, END, START } = require("@langchain/langgraph");
 const { createSalesQuoteTools } = require("../tools/salesQuoteTools");
+const { buildSalesQuoteGrounding } = require("../grounding/salesQuoteGrounding");
 
 function mapGoalToTool(goal) {
     switch (goal) {
@@ -17,6 +18,80 @@ function mapGoalToTool(goal) {
         default:
             return "sales_quote_context_query";
     }
+}
+
+function validateNormalizedResult(normalizedResult, grounding) {
+    const text = normalizedResult?.text || "";
+
+    if (!text.trim()) {
+        return {
+            ...normalizedResult,
+            text: "I could not generate a response for this request.",
+            validation: {
+                valid: false,
+                reason: "Empty response"
+            }
+        };
+    }
+
+    const forbiddenClaims = [
+        "I created",
+        "I have created",
+        "I sent",
+        "I have sent",
+        "I updated",
+        "I have updated",
+        "I deleted",
+        "I have deleted"
+    ];
+
+    const hasForbiddenClaim = forbiddenClaims.some(claim =>
+        text.toLowerCase().includes(claim.toLowerCase())
+    );
+
+    if (hasForbiddenClaim) {
+        return {
+            ...normalizedResult,
+            text:
+                text +
+                "\n\nNote: I have not performed any write action in CRM. Please review and execute any suggested action manually.",
+            validation: {
+                valid: true,
+                warning: "Response contained possible unsupported action claim"
+            }
+        };
+    }
+
+    return {
+        ...normalizedResult,
+        validation: {
+            valid: true,
+            reason: "Response validated"
+        }
+    };
+}
+
+function buildReasoning(plan, loadedContext) {
+    const needsAttachment = [
+        "analyze_attachment",
+        "extract_attachment_information",
+        "draft_follow_up_email",
+        "suggest_next_best_action"
+    ].includes(plan.goal);
+
+    const reuseAttachment =
+        needsAttachment &&
+        !!loadedContext?.hasMemoryDocument &&
+        !!loadedContext?.lastDocumentId;
+
+    return {
+        needsSalesQuoteData: plan.requiresSalesQuoteData !== false || needsAttachment,
+        needsAttachment,
+        reuseAttachment,
+        loadAttachmentFromCRM: needsAttachment && !reuseAttachment,
+        askClarification: false,
+        reason: plan.reason || ""
+    };
 }
 
 function normalizeToolResult(toolResult, selectedToolName) {
@@ -56,7 +131,10 @@ function createSalesQuoteGraph(baseCtx) {
             selectedToolName: null,
             rawToolResult: null,
             normalizedResult: null,
-            activity: null
+            activity: null,
+            grounding: null,
+            validatedResult: null,
+            reasoning: null,
         }
     });
 
@@ -91,6 +169,36 @@ function createSalesQuoteGraph(baseCtx) {
         return {
             ...state,
             loadedContext
+        };
+    });
+
+    graph.addNode("buildReasoning", async (state) => {
+        const reasoning = buildReasoning(state.plan, state.loadedContext);
+
+        console.log("Sales Quote Graph reasoning:", reasoning);
+
+        return {
+            ...state,
+            reasoning
+        };
+    });
+
+    graph.addNode("buildGrounding", async (state) => {
+        const grounding = await buildSalesQuoteGrounding({
+            ...baseCtx,
+            prompt: state.prompt,
+            salesQuoteDisplayId: state.salesQuoteDisplayId,
+            memory: state.memory,
+            loadedContext: state.loadedContext,
+            reasoning: state.reasoning,
+            plan: state.plan
+        });
+
+        console.log("Sales Quote Graph grounding:", grounding);
+
+        return {
+            ...state,
+            grounding
         };
     });
 
@@ -130,7 +238,8 @@ function createSalesQuoteGraph(baseCtx) {
         const result = await selectedTool.invoke({
             prompt: state.prompt,
             salesQuoteDisplayId: state.salesQuoteDisplayId,
-            memory: state.memory
+            memory: state.memory,
+            grounding: state.grounding
         });
 
         let parsedResult;
@@ -160,9 +269,25 @@ function createSalesQuoteGraph(baseCtx) {
         };
     });
 
+    graph.addNode("validateResponse", async (state) => {
+        const validatedResult = validateNormalizedResult(
+            state.normalizedResult,
+            state.grounding
+        );
+
+        console.log("Sales Quote Graph validation:", validatedResult.validation);
+
+        return {
+            ...state,
+            validatedResult
+        };
+    });
+
     graph.addEdge(START, "validateInput");
     graph.addEdge("validateInput", "loadContext");
-    graph.addEdge("loadContext", "selectTool");
+    graph.addEdge("loadContext", "buildReasoning");
+    graph.addEdge("buildReasoning", "buildGrounding");
+    graph.addEdge("buildGrounding", "selectTool");
     graph.addConditionalEdges(
         "selectTool",
         (state) => {
@@ -179,7 +304,8 @@ function createSalesQuoteGraph(baseCtx) {
     );
     graph.addEdge("generalChat", "normalizeResult");
     graph.addEdge("executeTool", "normalizeResult");
-    graph.addEdge("normalizeResult", END);
+    graph.addEdge("normalizeResult", "validateResponse");
+    graph.addEdge("validateResponse", END);
 
     return graph.compile();
 }

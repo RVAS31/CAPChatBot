@@ -218,7 +218,7 @@ async function runSalesQuoteAgent({
 
     return {
         activity: graphResult.activity,
-        result: graphResult.normalizedResult
+        result: graphResult.validatedResult
     };
 }
 
