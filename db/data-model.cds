@@ -32,17 +32,17 @@ entity DocumentAnalysis : cuid {
 }
 
 entity ConversationContext : cuid {
-  sessionId          : String;
-  lastPrompt         : LargeString;
-  lastResponse       : LargeString;
+  sessionId           : String;
+  lastPrompt          : LargeString;
+  lastResponse        : LargeString;
 
-  lastDocument       : Association to Documents;
-  lastActivity       : String;
-  lastBusinessObject : String;
-  lastObjectId       : String;
+  lastDocument        : Association to Documents;
+  lastActivity        : String;
+  lastBusinessObject  : String;
+  lastObjectId        : String;
 
-  createdAt          : Timestamp;
-  updatedAt          : Timestamp;
+  createdAt           : Timestamp;
+  updatedAt           : Timestamp;
 
   lastSuggestedSkills : LargeString;
 }
