@@ -22,19 +22,29 @@ sap.ui.define([
             },
 
             onChatListUpdateFinished: function (oEvent) {
-                var oList = oEvent.getSource();        // the List
-                var aItems = oList.getItems();         // now contains all rendered CustomListItems
+                var oList = oEvent.getSource();
+                var aItems = oList.getItems();
 
                 aItems.forEach(function (oItem) {
-                    var oHBox = oItem.getContent()[0];  // HBox
-                    var oVBox = oHBox.getItems()[0];    // VBox inside HBox
+                    var oHBox = oItem.getContent()[0];
+                    var oVBox = oHBox.getItems()[0];
 
-                    // Get sender from the model
-                    var sSender = oVBox.getBindingContext("chatBotModel").getProperty("sender");
+                    var sSender = oVBox
+                        .getBindingContext("chatBotModel")
+                        .getProperty("sender");
 
-                    // Apply bubble class
+                    oVBox.removeStyleClass("userBubble");
+                    oVBox.removeStyleClass("botBubble");
                     oVBox.addStyleClass(sSender === "user" ? "userBubble" : "botBubble");
                 });
+
+                setTimeout(function () {
+                    var oScrollContainer = this.byId("chatScrollContainer");
+
+                    if (oScrollContainer) {
+                        oScrollContainer.scrollTo(0, 999999, 300);
+                    }
+                }.bind(this), 100);
             },
 
             /**
@@ -75,9 +85,11 @@ sap.ui.define([
                 const oChatModel = new sap.ui.model.json.JSONModel({
                     messages: [],
                     currentPrompt: "",
-                    pendingAttachment: null,
                     sessionId: sessionId,
-                    context: { objectType: salesQuoteId ? "salesQuotes" : null, objectId: salesQuoteId || null }
+                    context: {
+                        objectType: salesQuoteId ? "salesQuotes" : null,
+                        objectId: salesQuoteId || null
+                    }
                 });
 
                 oChatModel.setSizeLimit(5000); // to increase limit 
@@ -125,161 +137,6 @@ sap.ui.define([
                 const params = new URLSearchParams(window.location.search);
                 return params.get("salesQuoteId");
             },
-
-            /**
-            * Once the user clicks on the cancel the fragment dialog is closed.
-            */
-            onCancel: function () {
-                let that = this,
-                    upLoadSet = that.byId("UploadSet");
-
-                //To check if the code and items
-                if (upLoadSet.getItems().length === 1) {
-                    //To enable the set property setSelectEnable to true
-                    that.getView().getModel("appViewModel").setProperty("/setSelectEnabled", true);
-                }
-
-                that.closeFragmentUpload()
-            },
-
-            /**
-             * To close fragment upload
-             */
-            closeFragmentUpload: function () {
-                let that = this;
-                // To close the fragment
-                that.uploadDialog.then(function (oDialog) {
-                    oDialog.close();
-                }.bind(that));
-
-            },
-
-            /**
-            * Once the user uploads on the fragment dialog pops up.
-            */
-            onUpload: function () {
-                let that = this;
-
-                // we use fragments. They are good to be used because they can be resued later on (xml fragments)
-                if (!that.uploadDialog) {
-                    that.uploadDialog = that.loadFragment({
-                        name: "app.view.UploadDialog"
-                    });
-                }
-
-                that.uploadDialog.then(function (oDialog) {
-
-                    //To set the select enable false
-                    that.getView().getModel("ChatBotViewModel").setProperty("/setSelectEnabled", false);
-
-                    // To get away with the previos uploaded file
-                    let upLoadSet = that.byId("UploadSet");
-
-                    if (upLoadSet.getItems().length === 1) {
-                        that.getView().getModel("ChatBotViewModel").setProperty("/setUploadEnabled", false);
-                    }
-
-                    oDialog.open();
-
-                }.bind(that));
-            },
-
-            /**
-             * To read file as base 64
-             * @param {*} oFile 
-             * @returns 
-             */
-            _readFileAsBase64: function (oFile) {
-                return new Promise((resolve, reject) => {
-                    const oReader = new FileReader();
-                    oReader.onload = () => {
-                        const sDataUrl = oReader.result; // data:<mime>;base64,xxxx
-                        const sBase64 = sDataUrl.split("base64,")[1] || "";
-                        resolve(sBase64);
-                    };
-                    oReader.onerror = reject;
-                    oReader.readAsDataURL(oFile);
-                });
-            },
-
-            /**
-             * To save the document 
-             * @returns 
-             */
-            onSaveDocument: async function () {
-                try {
-
-                    let that = this;
-                    const oUploadSet = that.byId("UploadSet");
-
-                    // With instantUpload=false, new files are usually in "incompleteItems"
-                    const aItems = oUploadSet.getIncompleteItems().length
-                        ? oUploadSet.getIncompleteItems()
-                        : oUploadSet.getItems();
-
-                    if (!aItems || aItems.length === 0) {
-                        sap.m.MessageToast.show("Please add a TXT or DOCX file.");
-                        return;
-                    }
-
-                    // single file MVP
-                    const oItem = aItems[0];
-                    const oFile = oItem.getFileObject();
-
-                    if (!oFile) {
-                        sap.m.MessageToast.show("Selected file is not accessible.");
-                        return;
-                    }
-
-                    // Optional: enforce types also here
-                    const sName = (oFile.name || "").toLowerCase();
-                    if (!(sName.endsWith(".txt") || sName.endsWith(".docx"))) {
-                        sap.m.MessageToast.show("Only TXT and DOCX are supported.");
-                        return;
-                    }
-
-                    const sBase64 = await that._readFileAsBase64(oFile);
-
-                    const oDataAIModel = that.getOwnerComponent().getModel("AIOdataModel");
-
-                    const documentId = await ODataRequests.callUnboundActionV4(oDataAIModel, "uploadTextDocument", {
-                        fileName: oFile.name,
-                        mimeType: oFile.type || "",
-                        contentBase64: sBase64
-                    });
-
-                    if (!documentId) {
-                        throw new Error("uploadTextDocument returned no documentId");
-                    }
-
-                    const oChatModel = that.getView().getModel("chatBotModel");
-                    oChatModel.setProperty("/pendingAttachment", {
-                        documentId,
-                        fileName: oFile.name,
-                        mimeType: oFile.type || "",
-                        size: oFile.size
-                    });
-
-                    oUploadSet.removeAllItems();
-
-                    sap.m.MessageToast.show("Document attached. Now type your question and press Send.");
-                    that.byId("messageInput")?.focus();
-
-                } catch (err) {
-                    console.error(err);
-                    sap.m.MessageToast.show(`Attachment failed: ${err.message || err}`);
-                }
-            },
-
-            /**
-             * To cancel the upload
-             */
-            onCancelUpload: function () {
-                let that = this;
-                const oUploadSet = that.byId("UploadSet");
-                oUploadSet.removeAllItems();
-            },
-
 
             /** 
              * Updates the chatbox model with the newest SAP CX data
@@ -420,7 +277,6 @@ sap.ui.define([
                     );
 
                     oChatModel.setProperty("/currentPrompt", "");
-                    oChatModel.setProperty("/pendingAttachment", null);
 
                     this._updateChatBot();
 
