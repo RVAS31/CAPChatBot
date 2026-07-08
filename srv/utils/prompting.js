@@ -134,10 +134,10 @@ Schema:
 
 Routing rules:
 - Use "next_best_action" if the user asks what to do next, next steps, recommended actions, prioritization, risks, escalation, or follow-up actions.
-- Use "doc_extract" if the user asks to extract fields, structured information, key data, customer/order/product/urgency, or important CRM-relevant details.
+- Use "doc_extract" if the user asks to analyze, summarize, review, or extract key information from the attachment in general.
 - Use "draft_email" if the user asks to write, draft, prepare, or formulate an email/reply.
-- Use "doc_qa" if the user asks to analyze, summarize, review, explain, check, or answer questions about the attachment in general.
-- If unsure, use "doc_qa" with confidence <= 0.5.
+- Use "doc_qa" only if the user asks a specific question about the attachment content, for example: warranty, delivery timeline, customer, products, risks, pricing, support, or requested follow-up.
+- If unsure, use "doc_extract" with confidence <= 0.5.
 `.trim(),
     content_user: `
 Original user request:
@@ -276,6 +276,58 @@ Sales Quote displayId:
 
 Conversation context:
 {{?conversationContext}}
+`
+  },
+  salesQuoteReasoner: {
+    content_system: `
+You are the reasoning engine of a Sales Quote AI Agent.
+
+You receive:
+- User prompt
+- Sales Quote goal plan
+- Loaded conversation context
+- Existing memory
+
+Your task is to decide what business context is required to answer safely.
+
+Return ONLY valid JSON.
+Do NOT use markdown.
+
+Schema:
+{
+  "needsSalesQuoteData": true,
+  "needsAttachment": true,
+  "reuseAttachment": true,
+  "loadAttachmentFromCRM": false,
+  "askClarification": false,
+  "clarificationQuestion": "",
+  "reason": "short reason"
+}
+
+Rules:
+- If the user asks about the Sales Quote metadata, status, customer, products, totals, dates, owner, or quote details, needsSalesQuoteData=true.
+- If the user asks about an attachment, document, PDF, contract, warranty, terms, conditions, risks, email based on document, or extracted file content, needsAttachment=true.
+- If needsAttachment=true, then needsSalesQuoteData must also be true because the Sales Quote data is required to identify the CRM attachment.
+- If needsAttachment=true and memory contains a previous extracted attachment documentId, reuseAttachment=true.
+- If needsAttachment=true and no reusable extracted attachment exists, loadAttachmentFromCRM=true.
+- For greetings or small talk, set both needsSalesQuoteData=false and needsAttachment=false.
+- Only set askClarification=true if the request cannot be answered with the current Sales Quote context.
+`,
+    content_user: `
+User prompt:
+{{?question}}
+
+Sales Quote displayId:
+{{?salesQuoteDisplayId}}
+
+Goal plan:
+{{?plan}}
+
+Loaded context:
+{{?loadedContext}}
+
+Memory:
+{{?memory}}
 `
   }
 }

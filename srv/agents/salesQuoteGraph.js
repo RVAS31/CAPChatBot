@@ -1,6 +1,7 @@
 const { StateGraph, END, START } = require("@langchain/langgraph");
 const { createSalesQuoteTools } = require("../tools/salesQuoteTools");
 const { buildSalesQuoteGrounding } = require("../grounding/salesQuoteGrounding");
+const { parseJsonFromModel } = require("../utils/jsonParser");
 
 function mapGoalToTool(goal) {
     switch (goal) {
@@ -71,27 +72,89 @@ function validateNormalizedResult(normalizedResult, grounding) {
     };
 }
 
-function buildReasoning(plan, loadedContext) {
-    const needsAttachment = [
-        "analyze_attachment",
-        "extract_attachment_information",
-        "draft_follow_up_email",
-        "suggest_next_best_action"
-    ].includes(plan.goal);
+async function buildReasoningWithLLM(state, baseCtx) {
+    const reasonerClient = new baseCtx.OrchestrationClient({
+        destination: baseCtx.destAI,
+        llm: { model_name: "gpt-4o" },
+        templating: {
+            template: [
+                {
+                    role: "system",
+                    content: baseCtx.prompts.salesQuoteReasoner.content_system
+                },
+                {
+                    role: "user",
+                    content: baseCtx.prompts.salesQuoteReasoner.content_user
+                }
+            ]
+        }
+    });
 
-    const reuseAttachment =
-        needsAttachment &&
-        !!loadedContext?.hasMemoryDocument &&
-        !!loadedContext?.lastDocumentId;
+    const response = await reasonerClient.chatCompletion({
+        inputParams: {
+            question: state.prompt,
+            salesQuoteDisplayId: state.salesQuoteDisplayId,
+            plan: JSON.stringify(state.plan || {}),
+            loadedContext: JSON.stringify(state.loadedContext || {}),
+            memory: JSON.stringify(state.memory || {})
+        }
+    });
 
-    return {
-        needsSalesQuoteData: plan.requiresSalesQuoteData !== false || needsAttachment,
-        needsAttachment,
-        reuseAttachment,
-        loadAttachmentFromCRM: needsAttachment && !reuseAttachment,
-        askClarification: false,
-        reason: plan.reason || ""
-    };
+    try {
+        const parsed = parseJsonFromModel(response.getContent());
+
+        const llmNeedsAttachment = !!parsed.needsAttachment;
+        const llmNeedsSalesQuoteData = !!parsed.needsSalesQuoteData;
+
+        const reasoning = {
+            needsAttachment: llmNeedsAttachment,
+
+            needsSalesQuoteData:
+                llmNeedsSalesQuoteData || llmNeedsAttachment,
+
+            reuseAttachment:
+                llmNeedsAttachment &&
+                !!state.loadedContext?.hasMemoryDocument &&
+                !!state.loadedContext?.lastDocumentId,
+
+            loadAttachmentFromCRM:
+                llmNeedsAttachment &&
+                !(
+                    !!state.loadedContext?.hasMemoryDocument &&
+                    !!state.loadedContext?.lastDocumentId
+                ),
+
+            askClarification: !!parsed.askClarification,
+            clarificationQuestion: parsed.clarificationQuestion || "",
+            reason: parsed.reason || ""
+        };
+
+        return reasoning;
+
+    } catch (e) {
+        console.error("Could not parse Sales Quote reasoning:", response.getContent());
+
+        const fallbackNeedsAttachment = !!state.plan?.requiresAttachment;
+
+        return {
+            needsAttachment: fallbackNeedsAttachment,
+            needsSalesQuoteData:
+                state.plan?.requiresSalesQuoteData !== false || fallbackNeedsAttachment,
+            reuseAttachment:
+                fallbackNeedsAttachment &&
+                !!state.loadedContext?.hasMemoryDocument &&
+                !!state.loadedContext?.lastDocumentId,
+            loadAttachmentFromCRM:
+                fallbackNeedsAttachment &&
+                !(
+                    !!state.loadedContext?.hasMemoryDocument &&
+                    !!state.loadedContext?.lastDocumentId
+                ),
+            askClarification: false,
+            clarificationQuestion: "",
+            reason: "Fallback reasoning"
+        };
+    }
 }
 
 function normalizeToolResult(toolResult, selectedToolName) {
@@ -173,7 +236,7 @@ function createSalesQuoteGraph(baseCtx) {
     });
 
     graph.addNode("buildReasoning", async (state) => {
-        const reasoning = buildReasoning(state.plan, state.loadedContext);
+        const reasoning = await buildReasoningWithLLM(state, baseCtx);
 
         console.log("Sales Quote Graph reasoning:", reasoning);
 
@@ -203,7 +266,13 @@ function createSalesQuoteGraph(baseCtx) {
     });
 
     graph.addNode("selectTool", async (state) => {
-        const selectedToolName = mapGoalToTool(state.plan.goal);
+        let selectedToolName;
+
+        if (state.reasoning?.needsAttachment) {
+            selectedToolName = "crm_attachment_analysis";
+        } else {
+            selectedToolName = mapGoalToTool(state.plan.goal);
+        }
 
         console.log("Sales Quote Graph tool:", selectedToolName);
 
