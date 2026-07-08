@@ -200,6 +200,7 @@ sap.ui.define([
                             messages.push({
                                 sender: "user",
                                 message: item.prompt,
+                                htmlMessage: this._escapeHtml(item.prompt),
                                 timestamp: item.createdAt,
                                 shouldNotReported: true
                             });
@@ -207,9 +208,9 @@ sap.ui.define([
                             messages.push({
                                 sender: "bot",
                                 message: item.response,
+                                htmlMessage: this._formatAiMessage(item.response),
                                 timestamp: item.createdAt,
-                                shouldNotReported:
-                                    item.isReport ? false : true,
+                                shouldNotReported: item.isReport ? false : true,
                                 id: item.ID
                             });
                         });
@@ -235,6 +236,32 @@ sap.ui.define([
                         that._oBusyDialog.close();
 
                     });
+            },
+
+            _escapeHtml: function (sText) {
+                return (sText || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+            },
+
+            _formatAiMessage: function (sText) {
+                if (!sText) {
+                    return "";
+                }
+
+                let sHtml = this._escapeHtml(sText);
+
+                sHtml = sHtml
+                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                    .replace(/\n- /g, "<br/>• ")
+                    .replace(/\n\d+\. /g, function (match) {
+                        return "<br/><strong>" + match.trim() + "</strong> ";
+                    })
+                    .replace(/\n\n/g, "<br/><br/>")
+                    .replace(/\n/g, "<br/>");
+
+                return sHtml;
             },
 
             /**

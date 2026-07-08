@@ -52,11 +52,10 @@
                                         class="sapUiTinyMargin"
                                     />
 
-                                    <Text
-                                        id="_IDGenText1"
-                                        text="{chatBotModel>message}"
+                                    <FormattedText
+                                        id="_IDGenFormattedText1"
+                                        htmlText="{chatBotModel>htmlMessage}"
                                         class="sapUiTinyMargin"
-                                        wrapping="true"
                                     />
 
                                     <Text
@@ -103,7 +102,8 @@
                     value="{chatBotModel>/currentPrompt}"
                 >
                     <layoutData>
-                        <OverflowToolbarLayoutData id="_IDGenOverflowToolbarLayoutData1"
+                        <OverflowToolbarLayoutData
+                            id="_IDGenOverflowToolbarLayoutData1"
                             shrinkable="true"
                             priority="NeverOverflow"
                         />
@@ -116,7 +116,8 @@
                     press=".onAskAI"
                 >
                     <layoutData>
-                        <OverflowToolbarLayoutData id="_IDGenOverflowToolbarLayoutData2"
+                        <OverflowToolbarLayoutData
+                            id="_IDGenOverflowToolbarLayoutData2"
                             priority="NeverOverflow"
                         />
                     </layoutData>
