@@ -1,5 +1,7 @@
 const { StateGraph, END, START } = require("@langchain/langgraph");
 const { createSalesQuoteTools } = require("../tools/salesQuoteTools");
+const { buildSalesQuoteGrounding } = require("../grounding/salesQuoteGrounding");
+const { parseJsonFromModel } = require("../utils/jsonParser");
 
 function mapGoalToTool(goal) {
     switch (goal) {
@@ -16,6 +18,142 @@ function mapGoalToTool(goal) {
         case "answer_sales_quote_question":
         default:
             return "sales_quote_context_query";
+    }
+}
+
+function validateNormalizedResult(normalizedResult, grounding) {
+    const text = normalizedResult?.text || "";
+
+    if (!text.trim()) {
+        return {
+            ...normalizedResult,
+            text: "I could not generate a response for this request.",
+            validation: {
+                valid: false,
+                reason: "Empty response"
+            }
+        };
+    }
+
+    const forbiddenClaims = [
+        "I created",
+        "I have created",
+        "I sent",
+        "I have sent",
+        "I updated",
+        "I have updated",
+        "I deleted",
+        "I have deleted"
+    ];
+
+    const hasForbiddenClaim = forbiddenClaims.some(claim =>
+        text.toLowerCase().includes(claim.toLowerCase())
+    );
+
+    if (hasForbiddenClaim) {
+        return {
+            ...normalizedResult,
+            text:
+                text +
+                "\n\nNote: I have not performed any write action in CRM. Please review and execute any suggested action manually.",
+            validation: {
+                valid: true,
+                warning: "Response contained possible unsupported action claim"
+            }
+        };
+    }
+
+    return {
+        ...normalizedResult,
+        validation: {
+            valid: true,
+            reason: "Response validated"
+        }
+    };
+}
+
+async function buildReasoningWithLLM(state, baseCtx) {
+    const reasonerClient = new baseCtx.OrchestrationClient({
+        destination: baseCtx.destAI,
+        llm: { model_name: "gpt-4o" },
+        templating: {
+            template: [
+                {
+                    role: "system",
+                    content: baseCtx.prompts.salesQuoteReasoner.content_system
+                },
+                {
+                    role: "user",
+                    content: baseCtx.prompts.salesQuoteReasoner.content_user
+                }
+            ]
+        }
+    });
+
+    const response = await reasonerClient.chatCompletion({
+        inputParams: {
+            question: state.prompt,
+            salesQuoteDisplayId: state.salesQuoteDisplayId,
+            plan: JSON.stringify(state.plan || {}),
+            loadedContext: JSON.stringify(state.loadedContext || {}),
+            memory: JSON.stringify(state.memory || {})
+        }
+    });
+
+    try {
+        const parsed = parseJsonFromModel(response.getContent());
+
+        const llmNeedsAttachment = !!parsed.needsAttachment;
+        const llmNeedsSalesQuoteData = !!parsed.needsSalesQuoteData;
+
+        const reasoning = {
+            needsAttachment: llmNeedsAttachment,
+
+            needsSalesQuoteData:
+                llmNeedsSalesQuoteData || llmNeedsAttachment,
+
+            reuseAttachment:
+                llmNeedsAttachment &&
+                !!state.loadedContext?.hasMemoryDocument &&
+                !!state.loadedContext?.lastDocumentId,
+
+            loadAttachmentFromCRM:
+                llmNeedsAttachment &&
+                !(
+                    !!state.loadedContext?.hasMemoryDocument &&
+                    !!state.loadedContext?.lastDocumentId
+                ),
+
+            askClarification: !!parsed.askClarification,
+            clarificationQuestion: parsed.clarificationQuestion || "",
+            reason: parsed.reason || ""
+        };
+
+        return reasoning;
+
+    } catch (e) {
+        console.error("Could not parse Sales Quote reasoning:", response.getContent());
+
+        const fallbackNeedsAttachment = !!state.plan?.requiresAttachment;
+
+        return {
+            needsAttachment: fallbackNeedsAttachment,
+            needsSalesQuoteData:
+                state.plan?.requiresSalesQuoteData !== false || fallbackNeedsAttachment,
+            reuseAttachment:
+                fallbackNeedsAttachment &&
+                !!state.loadedContext?.hasMemoryDocument &&
+                !!state.loadedContext?.lastDocumentId,
+            loadAttachmentFromCRM:
+                fallbackNeedsAttachment &&
+                !(
+                    !!state.loadedContext?.hasMemoryDocument &&
+                    !!state.loadedContext?.lastDocumentId
+                ),
+            askClarification: false,
+            clarificationQuestion: "",
+            reason: "Fallback reasoning"
+        };
     }
 }
 
@@ -56,7 +194,10 @@ function createSalesQuoteGraph(baseCtx) {
             selectedToolName: null,
             rawToolResult: null,
             normalizedResult: null,
-            activity: null
+            activity: null,
+            grounding: null,
+            validatedResult: null,
+            reasoning: null,
         }
     });
 
@@ -94,8 +235,44 @@ function createSalesQuoteGraph(baseCtx) {
         };
     });
 
+    graph.addNode("buildReasoning", async (state) => {
+        const reasoning = await buildReasoningWithLLM(state, baseCtx);
+
+        console.log("Sales Quote Graph reasoning:", reasoning);
+
+        return {
+            ...state,
+            reasoning
+        };
+    });
+
+    graph.addNode("buildGrounding", async (state) => {
+        const grounding = await buildSalesQuoteGrounding({
+            ...baseCtx,
+            prompt: state.prompt,
+            salesQuoteDisplayId: state.salesQuoteDisplayId,
+            memory: state.memory,
+            loadedContext: state.loadedContext,
+            reasoning: state.reasoning,
+            plan: state.plan
+        });
+
+        console.log("Sales Quote Graph grounding:", grounding);
+
+        return {
+            ...state,
+            grounding
+        };
+    });
+
     graph.addNode("selectTool", async (state) => {
-        const selectedToolName = mapGoalToTool(state.plan.goal);
+        let selectedToolName;
+
+        if (state.reasoning?.needsAttachment) {
+            selectedToolName = "crm_attachment_analysis";
+        } else {
+            selectedToolName = mapGoalToTool(state.plan.goal);
+        }
 
         console.log("Sales Quote Graph tool:", selectedToolName);
 
@@ -130,7 +307,8 @@ function createSalesQuoteGraph(baseCtx) {
         const result = await selectedTool.invoke({
             prompt: state.prompt,
             salesQuoteDisplayId: state.salesQuoteDisplayId,
-            memory: state.memory
+            memory: state.memory,
+            grounding: state.grounding
         });
 
         let parsedResult;
@@ -160,9 +338,25 @@ function createSalesQuoteGraph(baseCtx) {
         };
     });
 
+    graph.addNode("validateResponse", async (state) => {
+        const validatedResult = validateNormalizedResult(
+            state.normalizedResult,
+            state.grounding
+        );
+
+        console.log("Sales Quote Graph validation:", validatedResult.validation);
+
+        return {
+            ...state,
+            validatedResult
+        };
+    });
+
     graph.addEdge(START, "validateInput");
     graph.addEdge("validateInput", "loadContext");
-    graph.addEdge("loadContext", "selectTool");
+    graph.addEdge("loadContext", "buildReasoning");
+    graph.addEdge("buildReasoning", "buildGrounding");
+    graph.addEdge("buildGrounding", "selectTool");
     graph.addConditionalEdges(
         "selectTool",
         (state) => {
@@ -179,7 +373,8 @@ function createSalesQuoteGraph(baseCtx) {
     );
     graph.addEdge("generalChat", "normalizeResult");
     graph.addEdge("executeTool", "normalizeResult");
-    graph.addEdge("normalizeResult", END);
+    graph.addEdge("normalizeResult", "validateResponse");
+    graph.addEdge("validateResponse", END);
 
     return graph.compile();
 }

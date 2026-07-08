@@ -1,23 +1,14 @@
-const { readSalesQuoteByDisplayId } = require("../utils/crmAttachment");
-const { buildC4CAuthHeader } = require("../utils/service-functions");
-
 module.exports = async function salesQuoteContextQuery(ctx) {
     const {
         OrchestrationClient,
         destAI,
-        destC4C,
         prompts,
         prompt,
-        salesQuoteDisplayId
+        salesQuoteDisplayId,
+        grounding
     } = ctx;
 
-    const authHeader = buildC4CAuthHeader(destC4C);
-
-    const salesQuote = await readSalesQuoteByDisplayId(
-        destC4C,
-        authHeader,
-        salesQuoteDisplayId
-    );
+    const salesQuote = grounding?.salesQuote;
 
     if (!salesQuote) {
         return `I could not find Sales Quote ${salesQuoteDisplayId}.`;

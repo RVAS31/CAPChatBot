@@ -1,16 +1,5 @@
 // srv/skills/crmAttachmentAnalysis.js
 
-const {
-    readSalesQuoteByDisplayId,
-    getLatestAttachmentId,
-    getDocumentDownloadUrl,
-    getBinaryFromUrl,
-    extractFileName
-} = require("../utils/crmAttachment");
-
-const { buildC4CAuthHeader } = require("../utils/service-functions");
-const { extractTextFromBuffer } = require("../utils/documentExtraction");
-
 const nextBestAction = require("./nextBestAction");
 const docExtract = require("./docExtract");
 const docQa = require("./docQa");
@@ -120,124 +109,24 @@ async function executeFollowUpSkill(ctx, extractedText, documentId) {
     };
 }
 
-async function getDocumentFromMemory(ctx) {
-    const lastDocumentId = ctx.memory?.lastDocumentId;
+module.exports = async function crmAttachmentAnalysis(ctx) {
+    const { grounding } = ctx;
 
-    if (!lastDocumentId || !ctx.Documents) {
-        return null;
+    if (grounding?.attachment?.error) {
+        return grounding.attachment.error;
     }
 
-    const previousDocument = await SELECT.one
-        .from(ctx.Documents)
-        .where({ ID: lastDocumentId });
-
-    if (!previousDocument?.extractedText?.trim()) {
-        return null;
-    }
-
-    console.log("Reusing extracted document from memory:", lastDocumentId);
-
-    return {
-        documentId: lastDocumentId,
-        extractedText: previousDocument.extractedText,
-        fileName: previousDocument.fileName
-    };
-}
-
-async function downloadAndStoreLatestAttachment(ctx, displayId) {
-    const { destC4C, Documents, JSZip, uuidv4 } = ctx;
-
-    const authHeader = buildC4CAuthHeader(destC4C);
-
-    const salesQuote = await readSalesQuoteByDisplayId(
-        destC4C,
-        authHeader,
-        displayId
-    );
-
-    if (!salesQuote) {
-        return {
-            error: `I could not find a Sales Quote with displayId ${displayId}.`
-        };
-    }
-
-    const crmDocumentId = getLatestAttachmentId(salesQuote);
-
-    if (!crmDocumentId) {
-        return {
-            error: `I found Sales Quote ${displayId}, but it does not contain any attachment I can analyze.`
-        };
-    }
-
-    const downloadUrl = await getDocumentDownloadUrl(
-        destC4C,
-        authHeader,
-        crmDocumentId
-    );
-
-    if (!downloadUrl) {
-        return {
-            error: `I found an attachment for Sales Quote ${displayId}, but CRM did not return a download URL.`
-        };
-    }
-
-    const { buffer, mimeType, contentDisposition } =
-        await getBinaryFromUrl(downloadUrl);
-
-    const fileName = extractFileName(downloadUrl, contentDisposition);
-
-    const extractedText = await extractTextFromBuffer(
-        buffer,
-        fileName,
-        mimeType,
-        JSZip
-    );
+    const extractedText = grounding?.attachment?.extractedText;
+    const documentId = grounding?.attachment?.internalDocumentId;
 
     if (!extractedText?.trim()) {
-        return {
-            error: `I retrieved the attachment "${fileName}", but I could not extract readable text from it.`
-        };
-    }
-
-    const internalDocumentId = uuidv4();
-
-    await INSERT.into(Documents).entries({
-        ID: internalDocumentId,
-        fileName,
-        mimeType: mimeType || "",
-        size: buffer.length,
-        extractedText,
-        createdAt: new Date(),
-        createdBy: "crm-attachment"
-    });
-
-    return {
-        documentId: internalDocumentId,
-        extractedText,
-        fileName
-    };
-}
-
-module.exports = async function crmAttachmentAnalysis(ctx) {
-    const displayId = ctx.intentJson?.filter?.displayId;
-
-    if (!displayId) {
-        return "I could not identify the Sales Quote displayId. Please specify it, for example: “Analyze the attachment of sales quote displayId 35.”";
-    }
-
-    const memoryDocument = await getDocumentFromMemory(ctx);
-
-    const documentContext =
-        memoryDocument || await downloadAndStoreLatestAttachment(ctx, displayId);
-
-    if (documentContext.error) {
-        return documentContext.error;
+        return "No readable CRM attachment context is available.";
     }
 
     const result = await executeFollowUpSkill(
         ctx,
-        documentContext.extractedText,
-        documentContext.documentId
+        extractedText,
+        documentId
     );
 
     return {

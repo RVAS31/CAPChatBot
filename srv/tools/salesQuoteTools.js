@@ -7,12 +7,13 @@ const salesQuoteContextQuery = require("../skills/salesQuoteContextQuery");
 function createSalesQuoteTools(baseCtx) {
 
     const salesQuoteContextQueryTool = tool(
-        async ({ prompt, salesQuoteDisplayId, memory }) => {
+        async ({ prompt, salesQuoteDisplayId, memory, grounding }) => {
             const result = await salesQuoteContextQuery({
                 ...baseCtx,
                 prompt,
                 salesQuoteDisplayId,
-                memory
+                memory,
+                grounding
             });
 
             return typeof result === "string"
@@ -26,13 +27,14 @@ function createSalesQuoteTools(baseCtx) {
             schema: z.object({
                 prompt: z.string(),
                 salesQuoteDisplayId: z.string(),
-                memory: z.any().optional()
+                memory: z.any().optional(),
+                grounding: z.any().optional()
             })
         }
     );
 
     const crmAttachmentAnalysisTool = tool(
-        async ({ prompt, salesQuoteDisplayId, memory }) => {
+        async ({ prompt, salesQuoteDisplayId, memory, grounding }) => {
             const intentJson = {
                 hasDocument: false,
                 activity: "crm_attachment_analysis",
@@ -52,9 +54,8 @@ function createSalesQuoteTools(baseCtx) {
                 ...baseCtx,
                 prompt,
                 intentJson,
-                docText: "",
-                documentId: memory?.lastDocumentId || null,
-                memory
+                memory,
+                grounding
             });
 
             return typeof result === "string"
@@ -68,7 +69,8 @@ function createSalesQuoteTools(baseCtx) {
             schema: z.object({
                 prompt: z.string(),
                 salesQuoteDisplayId: z.string(),
-                memory: z.any().optional()
+                memory: z.any().optional(),
+                grounding: z.any().optional()
             })
         }
     );

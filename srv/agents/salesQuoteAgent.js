@@ -1,13 +1,6 @@
 const { createSalesQuoteGraph } = require("./salesQuoteGraph");
+const { parseJsonFromModel } = require("../utils/jsonParser");
 
-function parseJsonFromModel(content) {
-    const cleaned = content
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-
-    return JSON.parse(cleaned);
-}
 
 async function validateSalesQuoteScope({
     OrchestrationClient,
@@ -218,7 +211,7 @@ async function runSalesQuoteAgent({
 
     return {
         activity: graphResult.activity,
-        result: graphResult.normalizedResult
+        result: graphResult.validatedResult
     };
 }
 
