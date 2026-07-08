@@ -85,6 +85,7 @@ sap.ui.define([
                 const oChatModel = new sap.ui.model.json.JSONModel({
                     messages: [],
                     currentPrompt: "",
+                    isTyping: false,
                     sessionId: sessionId,
                     context: {
                         objectType: salesQuoteId ? "salesQuotes" : null,
@@ -252,16 +253,88 @@ sap.ui.define([
 
                 let sHtml = this._escapeHtml(sText);
 
+                sHtml = sHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+                sHtml = sHtml.replace(
+                    /(^|\n)([A-Z][A-Za-z0-9\s/&()-]{2,}:)/g,
+                    function (match, lineBreak, title) {
+                        return lineBreak + "<br/><span class='aiSectionHeader'>" +
+                            this._getSectionIcon(title) + " " + title +
+                            "</span>";
+                    }.bind(this)
+                );
+
+                sHtml = sHtml.replace(
+                    /(^|\n)(\d+\.\s.*?:\s?.*)/g,
+                    function (match, lineBreak, title) {
+                        return lineBreak + "<br/><span class='aiItemHeader'>📦 " + title + "</span>";
+                    }
+                );
+
+                // Bullet points: "- text"
+                sHtml = sHtml.replace(
+                    /\n-\s(.+)/g,
+                    "<br/><span class='aiListLine'><span class='aiBullet'>•</span>$1</span>"
+                );
+
+                // Bullet points already using "• text"
+                sHtml = sHtml.replace(
+                    /\n•\s(.+)/g,
+                    "<br/><span class='aiListLine'><span class='aiBullet'>•</span>$1</span>"
+                );
+
+                // Numbered steps: "1. text"
+                sHtml = sHtml.replace(
+                    /\n(\d+)\.\s(.+)/g,
+                    "<br/><span class='aiListLine'><span class='aiNumber'>$1</span>$2</span>"
+                );
+
                 sHtml = sHtml
-                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                    .replace(/\n- /g, "<br/>• ")
-                    .replace(/\n\d+\. /g, function (match) {
-                        return "<br/><strong>" + match.trim() + "</strong> ";
-                    })
                     .replace(/\n\n/g, "<br/><br/>")
                     .replace(/\n/g, "<br/>");
 
                 return sHtml;
+            },
+            _getSectionIcon: function (sTitle) {
+                const s = (sTitle || "").toLowerCase();
+
+                if (s.includes("account") || s.includes("customer")) {
+                    return "👤";
+                }
+
+                if (s.includes("item") || s.includes("product") || s.includes("scope")) {
+                    return "📦";
+                }
+
+                if (s.includes("price") || s.includes("pricing") || s.includes("commercial") || s.includes("payment") || s.includes("currency")) {
+                    return "💰";
+                }
+
+                if (s.includes("delivery") || s.includes("timeline") || s.includes("date")) {
+                    return "📅";
+                }
+
+                if (s.includes("email") || s.includes("subject") || s.includes("body")) {
+                    return "📧";
+                }
+
+                if (s.includes("status") || s.includes("progress") || s.includes("lifecycle")) {
+                    return "📊";
+                }
+
+                if (s.includes("warning") || s.includes("risk") || s.includes("urgent") || s.includes("issue")) {
+                    return "⚠️";
+                }
+
+                if (s.includes("next")) {
+                    return "➡️";
+                }
+
+                if (s.includes("summary")) {
+                    return "📝";
+                }
+
+                return "✨";
             },
 
             /**
@@ -293,6 +366,7 @@ sap.ui.define([
                 }
 
                 try {
+                    oChatModel.setProperty("/isTyping", true);
                     await ODataRequests.onCreateItemWithAction(
                         oDataAIModel,
                         "askSalesQuoteAgent",
@@ -309,6 +383,8 @@ sap.ui.define([
 
                 } catch (err) {
                     sap.m.MessageBox.error("Failed to call Sales Quote Agent: " + (err.message || err));
+                } finally {
+                    oChatModel.setProperty("/isTyping", false);
                 }
             },
 
