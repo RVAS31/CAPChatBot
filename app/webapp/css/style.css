@@ -1,21 +1,119 @@
-/* Increase specificity so it overrides theme defaults */
-.sapMLIB-CTX .sapMFlexBox.userBubble {
-  background-color: #d1eaff !important;
-  border-radius: 1rem;
-  padding: 0.5rem 0.75rem;
-  max-width: 70%;
+.userBubble {
+    background: #d8ecff;
+    border-radius: 1rem;
+    padding: 0.85rem 1rem;
+    max-width: 45%;
+    min-width: 220px;
 }
 
-.sapMLIB-CTX .sapMFlexBox.botBubble {
-  background-color: #f0f0f0 !important; 
-  border-radius: 1rem;
-  padding: 0.5rem 0.75rem;
-  max-width: 70%;
+.botBubble {
+    background: #f3f4f5;
+    border-radius: 1rem;
+    padding: 0.85rem 1rem;
+    max-width: 58%;
+    min-width: 260px;
+    border-left: 4px solid #0a6ed1;
 }
 
-/* Optional: keep bubbles sized to their content instead of stretching full width */
-.sapMLIB-CTX .sapMFlexBox.userBubble,
-.sapMLIB-CTX .sapMFlexBox.botBubble {
-  display: inline-flex;        /* so background hugs the text */
-  align-items: flex-start;     /* normal text flow inside the bubble */
+.chatBubbleHeader {
+    margin-bottom: 0.5rem;
+}
+
+.chatBubbleTitle {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #223548;
+}
+
+.chatBubbleText {
+    line-height: 1.5;
+}
+
+.chatTimestamp {
+    font-size: 0.75rem;
+    color: #6a6d70;
+    margin-top: 0.6rem;
+}
+
+.aiSectionHeader {
+    display: block;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: #0a6ed1;
+    font-size: 1rem;
+}
+
+.aiItemHeader {
+    display: block;
+    margin-top: 0.8rem;
+    margin-bottom: 0.35rem;
+    font-weight: 700;
+    color: #223548;
+}
+
+.aiListLine {
+    display: block;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.aiBullet {
+    display: inline-block;
+    color: #0a6ed1;
+    font-weight: 700;
+    width: 1rem;
+}
+
+.aiNumber {
+    display: inline-block;
+    background: #eaf4ff;
+    color: #0a6ed1;
+    font-weight: 700;
+    border-radius: 50%;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    text-align: center;
+    line-height: 1.25rem;
+    margin-right: 0.45rem;
+    font-size: 0.75rem;
+}
+
+.chatBubbleText {
+    line-height: 1.65;
+}
+
+.typingBubble {
+    min-width: 180px;
+}
+
+.typingDots {
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.typingDot {
+    font-size: 1rem;
+    color: #0a6ed1;
+    animation: typingPulse 1.4s infinite ease-in-out;
+}
+
+.typingDot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typingDot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingPulse {
+    0%, 80%, 100% {
+        opacity: 0.25;
+        transform: translateY(0);
+    }
+
+    40% {
+        opacity: 1;
+        transform: translateY(-3px);
+    }
 }

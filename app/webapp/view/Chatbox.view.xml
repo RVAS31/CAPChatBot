@@ -6,7 +6,7 @@
 >
     <Page
         id="chatPage"
-        title="Sales Quote Assistant"
+        title="Sales Quote Copilot"
         enableScrolling="false"
     >
         <content>
@@ -45,26 +45,38 @@
                                     id="_IDGenVBox2"
                                     class="sapUiSmallMargin userBubble"
                                 >
-                                    <core:Icon
-                                        id="_IDGenIcon"
-                                        src="{= ${chatBotModel>sender} === 'user' ? 'sap-icon://person-placeholder' : 'sap-icon://ai' }"
-                                        size="1rem"
-                                        class="sapUiTinyMargin"
-                                    />
+                                    <HBox
+                                        id="_IDGenHBox"
+                                        alignItems="Center"
+                                        class="chatBubbleHeader"
+                                    >
+                                        <core:Icon
+                                            id="_IDGenIcon"
+                                            src="{= ${chatBotModel>sender} === 'user' ? 'sap-icon://person-placeholder' : 'sap-icon://ai' }"
+                                            size="1rem"
+                                            class="sapUiTinyMarginEnd"
+                                        />
+
+                                        <Text
+                                            id="_IDGenText1"
+                                            text="{= ${chatBotModel>sender} === 'user' ? 'You' : 'Sales Quote Assistant' }"
+                                            class="chatBubbleTitle"
+                                        />
+                                    </HBox>
 
                                     <FormattedText
                                         id="_IDGenFormattedText1"
                                         htmlText="{chatBotModel>htmlMessage}"
-                                        class="sapUiTinyMargin"
+                                        class="chatBubbleText"
                                     />
 
                                     <Text
                                         id="_IDGenText2"
                                         text="{
-                                            path: 'chatBotModel>timestamp',
-                                            formatter: '.formatter.formatCreatedAt'
-                                        }"
-                                        class="sapUiTinyMarginTop sapUiTinyMarginEnd"
+        path: 'chatBotModel>timestamp',
+        formatter: '.formatter.formatCreatedAt'
+    }"
+                                        class="chatTimestamp"
                                     />
 
                                     <Button
@@ -85,6 +97,45 @@
                             </HBox>
                         </CustomListItem>
                     </List>
+                    <HBox
+                        id="typingIndicator"
+                        visible="{chatBotModel>/isTyping}"
+                        width="100%"
+                        justifyContent="Start"
+                    >
+                        <VBox id="_IDGenVBox1" class="sapUiSmallMargin botBubble typingBubble">
+                            <HBox id="_IDGenHBox1"
+                                alignItems="Center"
+                                class="chatBubbleHeader"
+                            >
+                                <core:Icon id="_IDGenIcon1"
+                                    src="sap-icon://ai"
+                                    size="1rem"
+                                    class="sapUiTinyMarginEnd"
+                                />
+
+                                <Text id="_IDGenText3"
+                                    text="Sales Quote Assistant"
+                                    class="chatBubbleTitle"
+                                />
+                            </HBox>
+
+                            <HBox id="_IDGenHBox2" class="typingDots">
+                                <Text id="_IDGenText4"
+                                    text="●"
+                                    class="typingDot"
+                                />
+                                <Text id="_IDGenText5"
+                                    text="●"
+                                    class="typingDot"
+                                />
+                                <Text id="_IDGenText6"
+                                    text="●"
+                                    class="typingDot"
+                                />
+                            </HBox>
+                        </VBox>
+                    </HBox>
                 </ScrollContainer>
             </VBox>
         </content>
