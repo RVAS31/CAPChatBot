@@ -7,13 +7,20 @@ const salesQuoteContextQuery = require("../skills/salesQuoteContextQuery");
 function createSalesQuoteTools(baseCtx) {
 
     const salesQuoteContextQueryTool = tool(
-        async ({ prompt, salesQuoteDisplayId, memory, grounding }) => {
+        async ({
+            prompt,
+            salesQuoteDisplayId,
+            memory,
+            grounding,
+            plan
+        }) => {
             const result = await salesQuoteContextQuery({
                 ...baseCtx,
                 prompt,
                 salesQuoteDisplayId,
                 memory,
-                grounding
+                grounding,
+                plan
             });
 
             return typeof result === "string"
@@ -28,17 +35,30 @@ function createSalesQuoteTools(baseCtx) {
                 prompt: z.string(),
                 salesQuoteDisplayId: z.string(),
                 memory: z.any().optional(),
-                grounding: z.any().optional()
+                grounding: z.any().optional(),
+                plan: z.any().optional()
             })
         }
     );
 
     const crmAttachmentAnalysisTool = tool(
-        async ({ prompt, salesQuoteDisplayId, memory, grounding }) => {
+        async ({
+            prompt,
+            salesQuoteDisplayId,
+            memory,
+            grounding,
+            plan
+        }) => {
+            const goal = plan?.goal || "analyze_attachment";
+
             const intentJson = {
                 hasDocument: false,
-                activity: "crm_attachment_analysis",
-                confidence: 1,
+
+                // Preserve the original business goal.
+                activity: goal,
+                goal,
+
+                confidence: plan?.confidence ?? 1,
                 businessobject: "salesQuotes",
                 service: "sales-quote-service",
                 operation: "read",
@@ -47,15 +67,27 @@ function createSalesQuoteTools(baseCtx) {
                     displayId: salesQuoteDisplayId
                 },
                 select: [],
-                payload: {}
+                payload: {},
+
+                requiresAttachment:
+                    plan?.requiresAttachment !== false,
+
+                requiresSalesQuoteData:
+                    plan?.requiresSalesQuoteData !== false
             };
+
+            console.log(
+                "CRM attachment tool goal:",
+                goal
+            );
 
             const result = await crmAttachmentAnalysis({
                 ...baseCtx,
                 prompt,
                 intentJson,
                 memory,
-                grounding
+                grounding,
+                plan
             });
 
             return typeof result === "string"
@@ -65,12 +97,13 @@ function createSalesQuoteTools(baseCtx) {
         {
             name: "crm_attachment_analysis",
             description:
-                "Use this tool to retrieve and analyze the latest attachment of a specific Sales Quote.",
+                "Use this tool to retrieve and analyze the latest attachment of a specific Sales Quote, prepare attachment-based emails and support attachment summary email workflows.",
             schema: z.object({
                 prompt: z.string(),
                 salesQuoteDisplayId: z.string(),
                 memory: z.any().optional(),
-                grounding: z.any().optional()
+                grounding: z.any().optional(),
+                plan: z.any().optional()
             })
         }
     );

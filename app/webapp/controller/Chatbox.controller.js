@@ -338,35 +338,168 @@ sap.ui.define([
             },
 
             /**
-             * Sends the prompt to the Sales Quote AI Agent.
+             * Checks whether the user's message confirms sending an email.
+             *
+             * @param {string} sText User message
+             * @returns {boolean}
+            */
+            _isSendConfirmation: function (sText) {
+                const sNormalized = String(sText || "")
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[.!?]+$/g, "");
+
+                const aConfirmations = [
+                    "yes",
+                    "yes send it",
+                    "send it",
+                    "go ahead",
+                    "please send",
+                    "please send it",
+                    "confirm",
+                    "confirmed",
+                    "ja",
+                    "senden",
+                    "bitte senden"
+                ];
+
+                return aConfirmations.includes(sNormalized);
+            },
+
+            /**
+             * Checks the current chat history for an email draft that is
+             * waiting for confirmation.
+             *
+             * @param {sap.ui.model.json.JSONModel} oChatModel Chat model
+             * @returns {boolean}
+             */
+            _hasPendingEmailDraft: function (oChatModel) {
+                const aMessages =
+                    oChatModel.getProperty("/messages") || [];
+
+                const oLastBotMessage = [...aMessages]
+                    .reverse()
+                    .find(function (oMessage) {
+                        return oMessage.sender === "bot";
+                    });
+
+                if (!oLastBotMessage) {
+                    return false;
+                }
+
+                const sMessage =
+                    String(oLastBotMessage.message || "");
+
+                return (
+                    sMessage.includes("Subject:") &&
+                    sMessage.includes("Body:") &&
+                    sMessage.includes("The email has not been sent yet.")
+                );
+            },
+
+            /**
+             * Calls the CAP action that sends the pending Sales Quote
+             * attachment-summary email.
+             */
+            _sendSalesQuoteSummaryEmail: async function ({
+                oDataAIModel,
+                oChatModel,
+                sSessionId,
+                sSalesQuoteId,
+                sConfirmationText
+            }) {
+                oChatModel.setProperty("/isTyping", true);
+
+                try {
+                    await ODataRequests.onCreateItemWithAction(
+                        oDataAIModel,
+                        "sendSalesQuoteSummaryEmail",
+                        {
+                            sessionId: sSessionId,
+                            salesQuoteDisplayId: sSalesQuoteId,
+                            confirmationText: sConfirmationText
+                        }
+                    );
+
+                    oChatModel.setProperty("/currentPrompt", "");
+
+                    this._updateChatBot();
+                } catch (oError) {
+                    sap.m.MessageBox.error(
+                        "The email could not be sent: " +
+                        (oError.message || oError)
+                    );
+                } finally {
+                    oChatModel.setProperty("/isTyping", false);
+                }
+            },
+
+            /**
+             * Sends the prompt to the Sales Quote AI Agent or confirms
+             * a pending email-send operation.
+             *
              * @returns {Promise<void>}
              */
             onAskAI: async function () {
-                const oDataAIModel = this.getOwnerComponent().getModel("AIOdataModel");
-                const oChatModel = this.getView().getModel("chatBotModel");
+                const oDataAIModel =
+                    this.getOwnerComponent().getModel("AIOdataModel");
 
-                const sPrompt = (oChatModel.getProperty("/currentPrompt") || "").trim();
+                const oChatModel =
+                    this.getView().getModel("chatBotModel");
+
+                const sPrompt =
+                    (oChatModel.getProperty("/currentPrompt") || "").trim();
 
                 if (!sPrompt) {
-                    sap.m.MessageToast.show("Please type a message first.");
+                    sap.m.MessageToast.show(
+                        "Please type a message first."
+                    );
                     return;
                 }
 
-                const sSessionId = oChatModel.getProperty("/sessionId");
+                const sSessionId =
+                    oChatModel.getProperty("/sessionId");
 
-                const oContext = oChatModel.getProperty("/context") || {};
+                const oContext =
+                    oChatModel.getProperty("/context") || {};
+
                 const sSalesQuoteId =
                     oContext.objectType === "salesQuotes"
                         ? oContext.objectId
                         : null;
 
                 if (!sSalesQuoteId) {
-                    sap.m.MessageBox.error("No Sales Quote context found.");
+                    sap.m.MessageBox.error(
+                        "No Sales Quote context found."
+                    );
+                    return;
+                }
+
+                /*
+                 * A confirmation must only be intercepted when the previous
+                 * assistant response contains a pending email draft.
+                 */
+                const bIsSendConfirmation =
+                    this._isSendConfirmation(sPrompt);
+
+                const bHasPendingEmail =
+                    this._hasPendingEmailDraft(oChatModel);
+
+                if (bIsSendConfirmation && bHasPendingEmail) {
+                    await this._sendSalesQuoteSummaryEmail({
+                        oDataAIModel,
+                        oChatModel,
+                        sSessionId,
+                        sSalesQuoteId,
+                        sConfirmationText: sPrompt
+                    });
+
                     return;
                 }
 
                 try {
                     oChatModel.setProperty("/isTyping", true);
+
                     await ODataRequests.onCreateItemWithAction(
                         oDataAIModel,
                         "askSalesQuoteAgent",
@@ -381,8 +514,11 @@ sap.ui.define([
 
                     this._updateChatBot();
 
-                } catch (err) {
-                    sap.m.MessageBox.error("Failed to call Sales Quote Agent: " + (err.message || err));
+                } catch (oError) {
+                    sap.m.MessageBox.error(
+                        "Failed to call Sales Quote Agent: " +
+                        (oError.message || oError)
+                    );
                 } finally {
                     oChatModel.setProperty("/isTyping", false);
                 }

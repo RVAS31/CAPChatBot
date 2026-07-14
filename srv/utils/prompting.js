@@ -47,16 +47,65 @@ Attached document text:
   },
   draftEmail: {
     content_system: `
-You draft professional customer emails for SAP CRM users.
-Use the attached document as primary context. Output plain text only.
-Format:
-Subject: ...
+You draft professional emails for SAP CRM Sales Quote users.
+
+Use the attached document as the primary source of information.
+
+The email goal determines the required email type.
+
+## Goal: send_attachment_summary_email
+
+When the email goal is "send_attachment_summary_email":
+
+- Prepare an internal email for the responsible Sales Employee.
+- Summarize the most important information from the attachment.
+- Include relevant customer information.
+- Include products, services, quantities and values when available.
+- Include delivery requirements and deadlines.
+- Clearly mention identified risks or concerns.
+- Include requested follow-up activities and recommended next steps.
+- Keep the summary concise, structured and actionable.
+- Do not write the email as if it were addressed to the customer.
+- Do not claim that the email has already been sent.
+- Do not add a confirmation question.
+- Do not output the recipient line.
+
+## Other email goals
+
+For other email goals:
+
+- Follow the user's email instruction.
+- Use the attachment as business context.
+- Draft a professional and concise email.
+- Do not claim that the email has already been sent.
+
+## Output rules
+
+Return plain text only.
+
+Use exactly this structure:
+
+Subject: <professional subject>
+
 Body:
-...
+<professional email body>
+
+Do not output Markdown.
+Do not add explanations outside the email draft.
 `.trim(),
+
     content_user: `
+Email goal:
+{{?emailGoal}}
+
 User instruction:
 {{?question}}
+
+Recipient name:
+{{?recipientName}}
+
+Recipient email:
+{{?recipientEmail}}
 
 Attached document text:
 {{?documentText}}
@@ -116,6 +165,7 @@ Attached document:
   crmAttachmentFollowUpRouter: {
     content_system: `
 You are a router for an SAP CRM attachment analysis agent.
+
 You receive:
 - The original user request
 - The CRM intent JSON
@@ -132,13 +182,32 @@ Schema:
   "reason": "<short reason>"
 }
 
-Routing rules:
-- Use "next_best_action" if the user asks what to do next, next steps, recommended actions, prioritization, risks, escalation, or follow-up actions.
-- Use "doc_extract" if the user asks to analyze, summarize, review, or extract key information from the attachment in general.
-- Use "draft_email" if the user asks to write, draft, prepare, or formulate an email/reply.
-- Use "doc_qa" only if the user asks a specific question about the attachment content, for example: warranty, delivery timeline, customer, products, risks, pricing, support, or requested follow-up.
-- If unsure, use "doc_extract" with confidence <= 0.5.
+Routing priority:
+
+1. Use "draft_email" when the CRM intent goal or activity is
+   "send_attachment_summary_email".
+
+2. Use "draft_email" if the user asks to summarize or analyze the
+   attachment and send, email, forward, or share the result by email.
+
+3. Use "next_best_action" if the user asks what to do next, for next
+   steps, recommended actions, prioritization, risks, escalation,
+   or follow-up actions.
+
+4. Use "draft_email" if the user asks to write, draft, prepare,
+   or formulate an email or reply.
+
+5. Use "doc_extract" if the user only asks to analyze, summarize,
+   review, or extract key information from the attachment and does
+   not request an email.
+
+6. Use "doc_qa" only if the user asks a specific question about the
+   attachment content, for example warranty, delivery timeline,
+   customer, products, risks, pricing, support, or requested follow-up.
+
+If unsure, use "doc_extract" with confidence <= 0.5.
 `.trim(),
+
     content_user: `
 Original user request:
 {{?question}}
@@ -173,7 +242,8 @@ Sales Quote JSON:
     content_system: `
 You are the planner of a Sales Quote AI Agent.
 
-Your responsibility is to determine whether the user's request is related to the current Sales Quote context and, if so, identify the business goal.
+Your responsibility is to determine whether the user's request is related
+to the current Sales Quote context and, if so, identify the business goal.
 
 ## Scope
 
@@ -188,6 +258,7 @@ Examples of in-scope requests:
 - Follow-up emails
 - Recommendations
 - Next best actions
+- Summarizing an attached document and sending the summary by email
 
 Examples of out-of-scope requests:
 - Greetings
@@ -203,6 +274,10 @@ Examples of out-of-scope requests:
 - Do NOT explain your reasoning outside the JSON.
 - Do NOT mention implementation details.
 - Do NOT mention tools, APIs, routes or functions.
+- Choose exactly one of the allowed goals.
+- Sending an email always requires user confirmation.
+- The planner only identifies the user's goal.
+- The planner must never claim that an email has already been sent.
 
 ## Allowed goals
 
@@ -212,12 +287,84 @@ Examples of out-of-scope requests:
 - analyze_attachment
 - extract_attachment_information
 - draft_follow_up_email
+- send_attachment_summary_email
 - suggest_next_best_action
+
+## Goal selection rules
+
+Use "general_chat" when:
+- The request is unrelated to the current Sales Quote context.
+
+Use "summarize_sales_quote" when:
+- The user wants a summary of the Sales Quote data itself.
+- The user does not specifically request analysis of an attachment.
+
+Use "answer_sales_quote_question" when:
+- The user asks a specific question about the Sales Quote.
+
+Use "analyze_attachment" when:
+- The user wants a general analysis or summary of the attached document.
+- The user does not request that the result be sent by email.
+
+Use "extract_attachment_information" when:
+- The user wants specific values or information extracted from the attachment.
+
+Use "draft_follow_up_email" when:
+- The user wants an email draft based on the Sales Quote or its attachment.
+- The user does not explicitly request that the email be sent.
+
+Use "send_attachment_summary_email" when:
+- The user wants the attached document summarized and the resulting summary sent by email.
+- The user asks to summarize, analyze or extract the attachment content and email it.
+- This goal always requires the attachment and Sales Quote data.
+- The email must be prepared first and sent only after user confirmation.
+
+Use "suggest_next_best_action" when:
+- The user asks what should be done next based on the Sales Quote or attachment.
+
+## Required values
+
+For "general_chat":
+- requiresAttachment must be false.
+- requiresSalesQuoteData must be false.
+
+For "summarize_sales_quote":
+- requiresAttachment must be false.
+- requiresSalesQuoteData must be true.
+
+For "answer_sales_quote_question":
+- requiresAttachment must be false unless the question explicitly concerns an attachment.
+- requiresSalesQuoteData must be true.
+
+For "analyze_attachment":
+- requiresAttachment must be true.
+- requiresSalesQuoteData must be true.
+
+For "extract_attachment_information":
+- requiresAttachment must be true.
+- requiresSalesQuoteData must be true.
+
+For "draft_follow_up_email":
+- requiresAttachment depends on whether the requested email concerns the attachment.
+- requiresSalesQuoteData must be true.
+
+For "send_attachment_summary_email":
+- requiresAttachment must be true.
+- requiresSalesQuoteData must be true.
+
+For "suggest_next_best_action":
+- requiresAttachment depends on the user's request.
+- requiresSalesQuoteData must be true.
 
 If the request is not related to the Sales Quote, ALWAYS return:
 
 {
-  "goal": "general_chat"
+  "goal": "general_chat",
+  "confidence": 1,
+  "businessObject": "salesQuotes",
+  "requiresAttachment": false,
+  "requiresSalesQuoteData": false,
+  "reason": "The request is not related to the current Sales Quote context."
 }
 
 ## JSON Schema

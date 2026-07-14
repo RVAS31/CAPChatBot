@@ -11,6 +11,7 @@ function mapGoalToTool(goal) {
         case "analyze_attachment":
         case "extract_attachment_information":
         case "draft_follow_up_email":
+        case "send_attachment_summary_email":
         case "suggest_next_best_action":
             return "crm_attachment_analysis";
 
@@ -308,7 +309,8 @@ function createSalesQuoteGraph(baseCtx) {
             prompt: state.prompt,
             salesQuoteDisplayId: state.salesQuoteDisplayId,
             memory: state.memory,
-            grounding: state.grounding
+            grounding: state.grounding,
+            plan: state.plan
         });
 
         let parsedResult;

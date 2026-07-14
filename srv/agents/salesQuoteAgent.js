@@ -95,6 +95,7 @@ async function planSalesGoal({
             "analyze_attachment",
             "extract_attachment_information",
             "draft_follow_up_email",
+            "send_attachment_summary_email",
             "suggest_next_best_action"
         ];
 

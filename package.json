@@ -23,6 +23,7 @@
     "express": "^4",
     "jszip": "^3.10.1",
     "langchain": "^0.3.31",
+    "nodemailer": "^9.0.3",
     "passport": "^0.7.0",
     "rimraf": "^6.0.1",
     "sqlite3": "^5.1.7",
